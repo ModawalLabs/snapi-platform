@@ -1,0 +1,923 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* ---------------------------------------------------------------------------
+ * Dark mode
+ * Class-based (driven by next-themes) rather than media-query based, so the
+ * user's explicit choice can beat their OS setting.
+ * ------------------------------------------------------------------------- */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------------
+ * Design tokens — semantic layer
+ *
+ * Palette: near-black ink, gold as the single expressive colour, azure blue
+ * reserved for interactive states (links, focus, selection).
+ *
+ * Two constraints specific to a shopping product drove these values:
+ *
+ *  1. Surfaces are near-zero chroma. Product photography sits on these, and any
+ *     tint in the background shifts how a garment's colour reads — which causes
+ *     returns. Warmth lives in the *page* (canvas), while cards stay neutral.
+ *
+ *  2. Gold is not one value. A gold readable as text on white is a dark bronze;
+ *     a gold that works as a filled badge is bright. Conflating them produces
+ *     either muddy accents or illegible text, so they are separate tokens
+ *     (`gold` for content, `gold-solid` for fills) and each is retuned per
+ *     theme.
+ *
+ * Authored in OKLCH: perceptually uniform, so one lightness step reads as the
+ * same step across every hue.
+ * ------------------------------------------------------------------------- */
+:root {
+  --radius: 0.75rem;
+
+  /* Neutrals — warm paper page, neutral white cards */
+  --color-canvas: oklch(97.6% 0.004 85);
+  --color-surface: oklch(100% 0 0);
+  --color-surface-raised: oklch(95.4% 0.005 85);
+  --color-surface-sunken: oklch(93.4% 0.006 85);
+  --color-overlay: oklch(100% 0 0);
+
+  /* Text — warm near-black, never pure #000 (harsh on a bright page) */
+  --color-content: oklch(17% 0.008 60);
+  --color-content-muted: oklch(46.5% 0.008 60);
+  --color-content-subtle: oklch(62% 0.007 60);
+  --color-content-inverse: oklch(98% 0.003 85);
+
+  /* Lines */
+  --color-border: oklch(90.5% 0.006 80);
+  --color-border-strong: oklch(79% 0.009 80);
+
+  /* Ink — the primary action surface. Near-black in light, near-white in dark. */
+  --color-ink: oklch(19% 0.008 60);
+  --color-ink-hover: oklch(28% 0.01 60);
+  --color-ink-content: oklch(98% 0.003 85);
+
+  /* Gold — the one expressive colour.
+   * `gold` is content-safe (AA on canvas); `gold-solid` is for fills. */
+  --color-gold: oklch(54% 0.1 72);
+  --color-gold-hover: oklch(48% 0.1 70);
+  --color-gold-solid: oklch(80% 0.12 85);
+  --color-gold-solid-hover: oklch(75% 0.125 84);
+  --color-gold-content: oklch(21% 0.025 70);
+  --color-gold-subtle: oklch(96.2% 0.028 85);
+  --color-gold-border: oklch(87% 0.055 82);
+
+  /* Azure — interactive states only: links, focus, selection. */
+  --color-azure: oklch(47% 0.17 255);
+  --color-azure-hover: oklch(41% 0.17 256);
+  --color-azure-solid: oklch(52% 0.18 255);
+  /* Darker on hover, like the gold fill — on a bright page a fill recedes to
+   * signal press, it does not brighten. */
+  --color-azure-solid-hover: oklch(46% 0.18 255);
+  --color-azure-content: oklch(98% 0.01 255);
+  --color-azure-subtle: oklch(96% 0.028 255);
+  --color-azure-border: oklch(86% 0.06 255);
+
+  /* Azure counterparts of the gold-only tokens, so the All Rounder flavour has a
+   * complete set to swap to rather than a partial one that leaves stray gold. */
+  --glow-azure-soft: oklch(55% 0.16 258 / 0.06);
+
+  --foil-azure-from: oklch(56% 0.16 256);
+  --foil-azure-mid: oklch(46% 0.17 255);
+  --foil-azure-to: oklch(54% 0.165 258);
+
+  --ring-sweep-gradient-azure: conic-gradient(
+    from 0deg,
+    oklch(50% 0.17 255 / 0) 0deg,
+    oklch(50% 0.17 255 / 0) 210deg,
+    oklch(50% 0.17 255 / 0.5) 265deg,
+    oklch(58% 0.17 252 / 0.85) 290deg,
+    oklch(50% 0.17 255 / 0.5) 315deg,
+    oklch(50% 0.17 255 / 0) 360deg
+  );
+
+  /* The ribbon's printed strip.
+   *
+   * Fixed values, *not* `var(--color-gold-solid)`: a physical-looking object does
+   * not change colour because the UI switched to dark, and that rule still holds.
+   * But it is an accent, so it does change with the flavour — the distinction is
+   * between the *theme* (a viewing condition) and the *edition* (what the brand
+   * is). Declared here so the flavour block has one name to repoint, and the
+   * component keeps a single class either way. */
+  --ribbon-face: oklch(80% 0.13 85);
+  --ribbon-ink: oklch(20% 0.025 70);
+  --ribbon-hairline: oklch(80% 0.13 85 / 0.3);
+
+  /* The composer's outer bloom, as whole shadow values.
+   *
+   * Tokens rather than literals in the class list because these were the last
+   * hardcoded gold in the app — the halo around the chat box stayed warm in an
+   * otherwise azure edition, which is exactly the sort of leftover that reads as
+   * a bug. Whole values rather than a colour plus alphas: there are two radii per
+   * state and the alphas differ between light and dark, so a single colour token
+   * could not carry it.
+   *
+   * Light runs roughly 1.75× the dark alphas — gold, or azure, spreading onto
+   * cream carries far less than the same light on near-black. */
+  --composer-bloom: 0 0 24px 4px oklch(72% 0.13 82 / 0.28), 0 0 60px 10px oklch(72% 0.13 82 / 0.14);
+  --composer-bloom-hover:
+    0 0 30px 5px oklch(72% 0.13 82 / 0.38), 0 0 70px 12px oklch(72% 0.13 82 / 0.2);
+  --composer-bloom-focus:
+    0 0 40px 8px oklch(72% 0.13 82 / 0.44), 0 0 90px 16px oklch(72% 0.13 82 / 0.22),
+    0 16px 40px oklch(0% 0 0 / 0.12);
+
+  --color-ring: var(--color-azure);
+
+  /* Status */
+  --color-success: oklch(52% 0.14 152);
+  --color-success-subtle: oklch(95.5% 0.04 152);
+  --color-warning: oklch(58% 0.13 70);
+  --color-warning-subtle: oklch(96% 0.05 80);
+  --color-danger: oklch(53% 0.2 25);
+  --color-danger-subtle: oklch(96% 0.035 25);
+
+  /* Commerce semantics: price movement direction */
+  --color-price-down: oklch(52% 0.14 152);
+  --color-price-up: oklch(53% 0.2 25);
+
+  /* Ambient glow — the gold/azure wash behind the main canvas.
+   * Deliberately weak in light mode: on a bright page the same alpha that
+   * reads as "atmosphere" in dark mode reads as a dirty gradient. */
+  --glow-gold: oklch(78% 0.13 82 / 0.14);
+  --glow-azure: oklch(52% 0.17 255 / 0.09);
+  --glow-gold-soft: oklch(80% 0.12 88 / 0.07);
+  --glow-vignette: transparent;
+
+  /* The wash itself, as one value.
+   *
+   * Declared once and never in `.dark`: the four `--glow-*` tokens inside it are
+   * themed, and a custom property resolves its own references at the point of
+   * *use*, not of declaration. So this single stack renders warm-on-cream in
+   * light and warm-on-near-black in dark with no second copy to keep in step.
+   *
+   * Lifted out of `.ambient-canvas::before` so a surface can paint it directly —
+   * that class also sets `position: relative`, which is fine on a page section and
+   * wrong on anything that has to be `fixed` or absolutely placed. */
+  --ambient-wash:
+    radial-gradient(ellipse 70vw 60vh at 22% 18%, var(--glow-gold), transparent 62%),
+    radial-gradient(ellipse 65vw 65vh at 82% 78%, var(--glow-azure), transparent 60%),
+    radial-gradient(ellipse 45vw 40vh at 88% 8%, var(--glow-gold-soft), transparent 65%),
+    radial-gradient(ellipse 120vw 120vh at 50% 50%, transparent 42%, var(--glow-vignette));
+
+  /* Foil sheen range for `.text-foil`. Kept narrow so the gradient reads as a
+   * sheen across the glyph rather than as two different colours inside it.
+   * Light-mode values clear 3:1 against the canvas — enough for display-size
+   * text only. Never apply `.text-foil` to body copy on a light background. */
+  --foil-from: oklch(64% 0.12 84);
+  --foil-mid: oklch(54% 0.115 74);
+  --foil-to: oklch(62% 0.12 82);
+
+  /* Travelling highlight for the composer's ring (see `--animate-ring-sweep`).
+   * A token rather than an inline gradient because it has to differ per theme:
+   * the bright gold used on dark all but disappears against a near-white glass
+   * panel, so light mode uses a deeper gold at higher alpha. */
+  --ring-sweep-gradient: conic-gradient(
+    from 0deg,
+    oklch(70% 0.13 80 / 0) 0deg,
+    oklch(70% 0.13 80 / 0) 210deg,
+    oklch(70% 0.13 80 / 0.5) 265deg,
+    oklch(82% 0.11 86 / 0.85) 290deg,
+    oklch(70% 0.13 80 / 0.5) 315deg,
+    oklch(70% 0.13 80 / 0) 360deg
+  );
+
+  /* Premium elevation — warm close shadow, cool far shadow. Two hues at two
+   * distances is what separates "expensive" from a flat grey drop shadow. */
+  --shadow-premium-sm: 0 1px 2px oklch(25% 0.02 70 / 0.05), 0 2px 8px -3px oklch(55% 0.1 85 / 0.1);
+  --shadow-premium:
+    0 1px 2px oklch(25% 0.02 70 / 0.05), 0 8px 24px -10px oklch(58% 0.11 85 / 0.16),
+    0 24px 56px -28px oklch(45% 0.14 255 / 0.18);
+  --shadow-premium-lg:
+    0 2px 4px oklch(25% 0.02 70 / 0.06), 0 16px 40px -12px oklch(58% 0.11 85 / 0.2),
+    0 40px 96px -36px oklch(45% 0.14 255 / 0.24);
+  /* Hairline top highlight — reads as a lit edge on a physical surface. */
+  --shadow-edge: inset 0 1px 0 oklch(100% 0 0 / 0.7);
+
+  /* Light falling on a tinted panel — see `.tint-panel`. A physical property of
+   * the surface, not of the accent: the sheen is white and the shading is a
+   * near-neutral, so the same two values work whichever hue the edition wears.
+   * That is also why they live here and not in the flavour block. */
+  --panel-lift: oklch(100% 0 0 / 0.5);
+  --panel-sink: oklch(35% 0.015 80 / 0.075);
+}
+
+.dark {
+  /* Near-black, faintly warm. Pure #000 makes elevation impossible to express
+   * (nothing can sit *below* it) and crushes product-photo shadows. */
+  --color-canvas: oklch(13.5% 0.005 60);
+  --color-surface: oklch(16.8% 0.006 60);
+  --color-surface-raised: oklch(20.5% 0.007 60);
+  --color-surface-sunken: oklch(11% 0.005 60);
+  --color-overlay: oklch(19% 0.007 60);
+
+  --color-content: oklch(97% 0.003 85);
+  --color-content-muted: oklch(71% 0.007 70);
+  --color-content-subtle: oklch(55.5% 0.007 70);
+  --color-content-inverse: oklch(15% 0.006 60);
+
+  --color-border: oklch(25.5% 0.007 60);
+  --color-border-strong: oklch(36% 0.009 60);
+
+  /* Ink inverts: the high-contrast action is now near-white on near-black. */
+  --color-ink: oklch(96% 0.003 85);
+  --color-ink-hover: oklch(89% 0.004 85);
+  --color-ink-content: oklch(15% 0.008 60);
+
+  /* Gold can be bright here — there is no white page to fight. */
+  --color-gold: oklch(82% 0.125 86);
+  --color-gold-hover: oklch(88% 0.115 87);
+  --color-gold-solid: oklch(80% 0.13 85);
+  --color-gold-solid-hover: oklch(85% 0.125 86);
+  --color-gold-content: oklch(18% 0.025 70);
+  --color-gold-subtle: oklch(24% 0.042 80);
+  --color-gold-border: oklch(35% 0.06 82);
+
+  --color-azure: oklch(74% 0.13 248);
+  --color-azure-hover: oklch(80% 0.12 248);
+  --color-azure-solid: oklch(58% 0.18 254);
+  /* Lighter on hover here — the direction flips with the ground, exactly as the
+   * gold fill's does. */
+  --color-azure-solid-hover: oklch(66% 0.17 252);
+  --color-azure-content: oklch(98% 0.01 255);
+  --color-azure-subtle: oklch(24% 0.05 254);
+  --color-azure-border: oklch(36% 0.08 254);
+
+  --glow-azure-soft: oklch(62% 0.18 256 / 0.1);
+
+  --foil-azure-from: oklch(86% 0.09 250);
+  --foil-azure-mid: oklch(74% 0.13 248);
+  --foil-azure-to: oklch(82% 0.1 252);
+
+  --ring-sweep-gradient-azure: conic-gradient(
+    from 0deg,
+    oklch(70% 0.14 250 / 0) 0deg,
+    oklch(70% 0.14 250 / 0) 210deg,
+    oklch(70% 0.14 250 / 0.25) 265deg,
+    oklch(90% 0.06 250 / 0.48) 290deg,
+    oklch(70% 0.14 250 / 0.25) 315deg,
+    oklch(70% 0.14 250 / 0) 360deg
+  );
+
+  /* The hero's values verbatim — the composer is the marketing card, and on a
+   * near-black ground the bloom needs far less alpha to read. */
+  --composer-bloom: 0 0 24px 4px oklch(80% 0.13 85 / 0.1), 0 0 60px 10px oklch(80% 0.13 85 / 0.05);
+  --composer-bloom-hover:
+    0 0 30px 5px oklch(80% 0.13 85 / 0.18), 0 0 70px 12px oklch(80% 0.13 85 / 0.08);
+  --composer-bloom-focus:
+    0 0 40px 8px oklch(80% 0.13 85 / 0.22), 0 0 90px 16px oklch(80% 0.13 85 / 0.1),
+    0 20px 60px oklch(0% 0 0 / 0.5);
+
+  --color-success: oklch(74% 0.15 152);
+  --color-success-subtle: oklch(24% 0.05 152);
+  --color-warning: oklch(82% 0.14 82);
+  --color-warning-subtle: oklch(26% 0.05 80);
+  --color-danger: oklch(70% 0.18 25);
+  --color-danger-subtle: oklch(25% 0.06 25);
+
+  --color-price-down: oklch(74% 0.15 152);
+  --color-price-up: oklch(70% 0.18 25);
+
+  --glow-gold: oklch(80% 0.14 85 / 0.17);
+  --glow-azure: oklch(60% 0.19 258 / 0.2);
+  --glow-gold-soft: oklch(82% 0.13 88 / 0.09);
+  /* Corner falloff. On dark, pulling the extremities down is what makes the
+   * centre feel lit rather than making the whole panel feel grey. */
+  --glow-vignette: oklch(8% 0.004 60 / 0.55);
+
+  --foil-from: oklch(90% 0.1 90);
+  --foil-mid: oklch(78% 0.13 82);
+  --foil-to: oklch(86% 0.11 88);
+
+  /* The marketing hero's values, verbatim. */
+  --ring-sweep-gradient: conic-gradient(
+    from 0deg,
+    oklch(80% 0.13 85 / 0) 0deg,
+    oklch(80% 0.13 85 / 0) 210deg,
+    oklch(80% 0.13 85 / 0.25) 265deg,
+    oklch(95% 0.05 92 / 0.48) 290deg,
+    oklch(80% 0.13 85 / 0.25) 315deg,
+    oklch(80% 0.13 85 / 0) 360deg
+  );
+
+  /* On a dark canvas a black shadow is invisible. Elevation has to come from
+   * coloured light bleeding outward instead. */
+  --shadow-premium-sm: 0 1px 2px oklch(0% 0 0 / 0.4), 0 2px 10px -3px oklch(80% 0.12 85 / 0.07);
+  --shadow-premium:
+    0 1px 2px oklch(0% 0 0 / 0.45), 0 8px 28px -10px oklch(80% 0.12 85 / 0.12),
+    0 28px 64px -28px oklch(62% 0.18 255 / 0.22);
+  --shadow-premium-lg:
+    0 2px 4px oklch(0% 0 0 / 0.5), 0 18px 46px -12px oklch(80% 0.12 85 / 0.16),
+    0 46px 110px -36px oklch(62% 0.18 255 / 0.3);
+  --shadow-edge: inset 0 1px 0 oklch(100% 0 0 / 0.06);
+
+  /* Far less sheen and far more shading. On a dark canvas a 50% white top edge
+   * would read as a blown highlight rather than as light. */
+  --panel-lift: oklch(100% 0 0 / 0.05);
+  --panel-sink: oklch(0% 0 0 / 0.25);
+}
+
+/* ---------------------------------------------------------------------------
+ * Flavour — All Rounder
+ *
+ * The whole edition change is this one block. Every `gold` token is repointed at
+ * its `azure` counterpart, and because the utility bridge below is `inline`,
+ * every `text-gold` / `bg-gold-subtle` / `border-gold-border` in the app follows
+ * without a single component knowing a flavour exists.
+ *
+ * ## Why one block covers both themes
+ *
+ * The right-hand sides are `var(--color-azure…)`, not literals — and a custom
+ * property resolves its references on the element where it is *used*, not where
+ * it is declared. On `<html class="dark" data-flavour="all-rounder">` those vars
+ * already hold their dark values, so this block yields dark azure there and light
+ * azure otherwise. A second `.dark[data-flavour]` block would be dead weight.
+ *
+ * ## Why it sits after `.dark`
+ *
+ * `[data-flavour="…"]` and `.dark` are both one selector on the same element, so
+ * they carry equal specificity and source order decides. This must come second.
+ *
+ * The Snapi mark stays gold: it is a fixed image asset, not a token.
+ * ------------------------------------------------------------------------- */
+[data-flavour="all-rounder"] {
+  --color-gold: var(--color-azure);
+  --color-gold-hover: var(--color-azure-hover);
+  --color-gold-solid: var(--color-azure-solid);
+  --color-gold-solid-hover: var(--color-azure-solid-hover);
+  --color-gold-content: var(--color-azure-content);
+  --color-gold-subtle: var(--color-azure-subtle);
+  --color-gold-border: var(--color-azure-border);
+
+  /* The ambient wash is gold *and* azure by design. Swapping only the gold half
+   * would leave two blues fighting, so the warm source becomes a second, softer
+   * blue and the composition survives. */
+  --glow-gold: var(--glow-azure);
+  --glow-gold-soft: var(--glow-azure-soft);
+
+  --foil-from: var(--foil-azure-from);
+  --foil-mid: var(--foil-azure-mid);
+  --foil-to: var(--foil-azure-to);
+
+  --ring-sweep-gradient: var(--ring-sweep-gradient-azure);
+
+  /* The ribbon follows the edition even though it ignores the theme — leave it
+   * gold and it becomes the one warm object on an otherwise azure page, which
+   * reads as something nobody updated rather than as a deliberate contrast. */
+  --ribbon-face: oklch(62% 0.17 254);
+  --ribbon-ink: oklch(98% 0.01 255);
+  --ribbon-hairline: oklch(62% 0.17 254 / 0.35);
+
+  /* The halo around the chat box. Alphas match the gold exactly — only the hue
+   * moves — so the composer sits at the same visual weight in both editions
+   * rather than reading heavier or fainter for the sake of a colour change. */
+  --composer-bloom:
+    0 0 24px 4px oklch(55% 0.17 256 / 0.28), 0 0 60px 10px oklch(55% 0.17 256 / 0.14);
+  --composer-bloom-hover:
+    0 0 30px 5px oklch(55% 0.17 256 / 0.38), 0 0 70px 12px oklch(55% 0.17 256 / 0.2);
+  --composer-bloom-focus:
+    0 0 40px 8px oklch(55% 0.17 256 / 0.44), 0 0 90px 16px oklch(55% 0.17 256 / 0.22),
+    0 16px 40px oklch(0% 0 0 / 0.12);
+}
+
+/* Dark + All Rounder. The one place a second block is genuinely needed: these are
+ * whole shadow values, not colour references, so they cannot inherit the dark
+ * theme's alphas the way the colour tokens above do. */
+.dark[data-flavour="all-rounder"] {
+  --composer-bloom:
+    0 0 24px 4px oklch(68% 0.16 252 / 0.12), 0 0 60px 10px oklch(68% 0.16 252 / 0.06);
+  --composer-bloom-hover:
+    0 0 30px 5px oklch(68% 0.16 252 / 0.2), 0 0 70px 12px oklch(68% 0.16 252 / 0.09);
+  --composer-bloom-focus:
+    0 0 40px 8px oklch(68% 0.16 252 / 0.24), 0 0 90px 16px oklch(68% 0.16 252 / 0.11),
+    0 20px 60px oklch(0% 0 0 / 0.5);
+}
+
+/* ---------------------------------------------------------------------------
+ * Token → utility bridge
+ * `inline` so utilities resolve `var()` at the use site and therefore respond
+ * to `.dark` without duplicating every utility class.
+ * ------------------------------------------------------------------------- */
+@theme inline {
+  --color-canvas: var(--color-canvas);
+  --color-surface: var(--color-surface);
+  --color-surface-raised: var(--color-surface-raised);
+  --color-surface-sunken: var(--color-surface-sunken);
+  --color-overlay: var(--color-overlay);
+
+  --color-content: var(--color-content);
+  --color-content-muted: var(--color-content-muted);
+  --color-content-subtle: var(--color-content-subtle);
+  --color-content-inverse: var(--color-content-inverse);
+
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-ring: var(--color-ring);
+
+  --color-ink: var(--color-ink);
+  --color-ink-hover: var(--color-ink-hover);
+  --color-ink-content: var(--color-ink-content);
+
+  --color-gold: var(--color-gold);
+  --color-gold-hover: var(--color-gold-hover);
+  --color-gold-solid: var(--color-gold-solid);
+  --color-gold-solid-hover: var(--color-gold-solid-hover);
+  --color-gold-content: var(--color-gold-content);
+  --color-gold-subtle: var(--color-gold-subtle);
+  --color-gold-border: var(--color-gold-border);
+
+  --color-azure: var(--color-azure);
+  --color-azure-hover: var(--color-azure-hover);
+  --color-azure-solid: var(--color-azure-solid);
+  --color-azure-content: var(--color-azure-content);
+  --color-azure-subtle: var(--color-azure-subtle);
+  --color-azure-border: var(--color-azure-border);
+
+  --color-success: var(--color-success);
+  --color-success-subtle: var(--color-success-subtle);
+  --color-warning: var(--color-warning);
+  --color-warning-subtle: var(--color-warning-subtle);
+  --color-danger: var(--color-danger);
+  --color-danger-subtle: var(--color-danger-subtle);
+
+  --color-price-down: var(--color-price-down);
+  --color-price-up: var(--color-price-up);
+
+  --shadow-premium-sm: var(--shadow-premium-sm);
+  --shadow-premium: var(--shadow-premium);
+  --shadow-premium-lg: var(--shadow-premium-lg);
+  --shadow-edge: var(--shadow-edge);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  /* Editorial display serif, shared with the marketing site. Headings on
+   * couture surfaces only — never body copy or UI chrome. */
+  --font-display: var(--font-oranienbaum), "Cormorant Garamond", Georgia, serif;
+
+  --radius-xs: calc(var(--radius) - 0.5rem);
+  --radius-sm: calc(var(--radius) - 0.25rem);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 0.25rem);
+  --radius-xl: calc(var(--radius) + 0.75rem);
+
+  /* Motion — one scale, so the whole product feels like one product. */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --animate-shimmer: shimmer 1.8s ease-in-out infinite;
+  --animate-rise: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-pulse-soft: pulse-soft 2.4s ease-in-out infinite;
+  /* Slow on purpose. A fast marquee reads as a discount banner; luxury retail
+   * moves at a pace that suggests nothing needs to be rushed. */
+  --animate-marquee: marquee 60s linear infinite;
+
+  @keyframes shimmer {
+    0%,
+    100% {
+      opacity: 0.45;
+    }
+    50% {
+      opacity: 0.85;
+    }
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(0.75rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes pulse-soft {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.55;
+    }
+  }
+
+  /* Translating exactly -50% is what makes the loop seamless — it depends on the
+   * track holding exactly two copies of the content. Used by <Marquee /> and
+   * <InfiniteRibbon />. */
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* Same distance, opposite direction — for counter-scrolling pairs. */
+  @keyframes marquee-reverse {
+    from {
+      transform: translateX(-50%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  /* Breathing gold bloom. Used on the collapsed sidebar composer, where a 40px
+   * frosted square is easy to miss among the icon rail — a slow pulse gives it
+   * presence without adding another gold fill to the page.
+   *
+   * Animates `box-shadow` rather than a blurred child element: a child would need
+   * to sit behind the button's own translucent fill, and negative z-index inside
+   * a stacking context does not reliably get there. `--shadow-edge` is carried
+   * through both stops so the glass's specular highlight is not dropped for the
+   * duration of the animation, and so it stays theme-correct. */
+  /* Gold light travelling around the composer's edge. A rotating conic-gradient
+   * layer behind an inset panel is the only way to get this — animating a
+   * border-image or a box-shadow cannot move a highlight along a perimeter.
+   * 7s to match the marketing hero exactly. */
+  --animate-ring-sweep: ring-sweep 7s linear infinite;
+
+  @keyframes ring-sweep {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Same sweep, fired intermittently instead of looped.
+   *
+   * A continuous 7s rotation is *less* noticeable, not more: peripheral vision
+   * responds to onset rather than to steady state, and the eye habituates to a
+   * regular low-amplitude loop within about two cycles — after which it filters
+   * it out entirely. Holding still for nine seconds and then travelling the
+   * perimeter in three restores the onset the eye is actually built to catch,
+   * and spends less total motion doing it.
+   *
+   * The rotation is packed into the first 25% of the cycle, so the revolution is
+   * quicker than the looping version even though the period is longer. Easing
+   * only matters across that stretch; from 25% on the value does not change. */
+  --animate-ring-sweep-burst: ring-sweep-burst 12s cubic-bezier(0.6, 0, 0.35, 1) infinite;
+
+  @keyframes ring-sweep-burst {
+    0% {
+      transform: rotate(0deg);
+    }
+    25%,
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* The Ask Snapi button's breathing halo.
+   *
+   * Both ends are the composer's own bloom tokens rather than new values, so the
+   * button glows at exactly the weight the chat box does and follows the flavour
+   * switch with it — gold in Signature, azure in All Rounder, no second
+   * definition. Custom properties inside keyframes resolve per element against
+   * the cascade, which is what lets the override on `<html>` reach in here.
+   *
+   * Slow on purpose: 3.4s reads as breathing, and anything under about two
+   * seconds reads as an alert. */
+  --animate-ask-glow: ask-glow 3.4s ease-in-out infinite;
+
+  @keyframes ask-glow {
+    0%,
+    100% {
+      box-shadow: var(--shadow-edge), var(--composer-bloom);
+    }
+    50% {
+      box-shadow: var(--shadow-edge), var(--composer-bloom-hover);
+    }
+  }
+
+  /* Hard on/off at the halfway point, not a fade — a terminal caret does not
+   * dim, and the marketing hero blinks it on a 1s square wave. */
+  --animate-caret-blink: caret-blink 1s linear infinite;
+
+  @keyframes caret-blink {
+    0%,
+    49.99% {
+      opacity: 1;
+    }
+    50%,
+    100% {
+      opacity: 0;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Docked composer footprint
+ *
+ * The composer floats over the page, so while it is up the last row of content
+ * sits underneath it — unreachable on any page that does not scroll past its own
+ * end. This reserves room for it, and only while it is actually there: padding
+ * left in place permanently would leave a dead 200px band at the foot of every
+ * page for the majority of the time the card is away.
+ *
+ * A `:has()` rule rather than a prop threaded through the layout, because the
+ * open state is client state and `<main>` is rendered by a Server Component.
+ * The alternative is a client wrapper around the whole shell whose only job is
+ * to relay one boolean to one class.
+ *
+ * The transition matches the card's own, so the page settles as the card
+ * arrives instead of jumping a step ahead of it.
+ * ------------------------------------------------------------------------- */
+#main {
+  transition: padding-bottom 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+body:has([data-composer-open]) #main {
+  padding-bottom: 12rem;
+}
+
+/* ---------------------------------------------------------------------------
+ * Layout constants
+ * Sidebar width is a variable rather than a hardcoded class so the collapsed
+ * rail can animate, and so the main region can offset itself without either
+ * component knowing the other's numbers.
+ * ------------------------------------------------------------------------- */
+:root {
+  --sidebar-width: 17rem;
+  --sidebar-width-collapsed: 4.25rem;
+}
+
+/* ---------------------------------------------------------------------------
+ * Base layer
+ * ------------------------------------------------------------------------- */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    /* Native form controls and scrollbars follow the theme. */
+    color-scheme: light;
+  }
+
+  /* Reserve scrollbar space only where the scrollbar actually takes space.
+   * Touch devices use overlay scrollbars, so an unconditional gutter just
+   * steals a strip of viewport on the smallest screens. */
+  @media (pointer: fine) {
+    html {
+      scrollbar-gutter: stable;
+    }
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-content antialiased;
+    text-rendering: optimizeLegibility;
+    /* Tighter tracking at display sizes reads as considered typography; the
+     * per-element override is in the `display-*` utilities below. */
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  /* Visible, consistent focus for keyboard users on every interactive node.
+   * Azure — the one place blue always appears. */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
+
+  ::selection {
+    background: var(--color-gold-subtle);
+    color: var(--color-content);
+  }
+
+  /* Respect users who ask the OS to calm things down. */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Keep numeric UI (prices, quantities, counts) from jittering as digits change. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  /* Content-width container used by page shells. */
+  .container-page {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  /**
+   * Scope for anything sitting on a photograph.
+   *
+   * Pins the gold tokens to their bright, dark-theme values regardless of the
+   * user's theme. Without this, a photographic surface breaks in light mode in a
+   * way that is easy to miss: `--color-gold` and the `--foil-*` range are
+   * deliberately dark bronze there (they have to clear AA against a cream
+   * canvas), so gold type over a scrimmed photo would render nearly black on
+   * near-black.
+   *
+   * Works because the colour tokens are bridged through `@theme inline` — every
+   * `text-gold` inside resolves `var(--color-gold)` at the use site, so
+   * redefining it on an ancestor is enough. One lever, no per-element overrides.
+   */
+  .on-photo {
+    --color-gold: oklch(82% 0.125 86);
+    --color-gold-border: oklch(80% 0.13 85 / 0.45);
+    --foil-from: oklch(92% 0.09 90);
+    --foil-mid: oklch(80% 0.13 84);
+    --foil-to: oklch(88% 0.1 88);
+  }
+
+  /* `.on-photo` pins gold to a bright literal so it survives a photograph, which
+   * means it also overrides the flavour switch — those literals would keep the
+   * hero gold in an azure edition. Hence a flavour-scoped copy, at the same
+   * lightness: a photograph is dark whichever accent the app wears, so the
+   * requirement (bright enough to read on it) does not change with the hue. */
+  [data-flavour="all-rounder"] .on-photo {
+    --color-gold: oklch(78% 0.13 250);
+    --color-gold-border: oklch(74% 0.14 250 / 0.45);
+    --foil-from: oklch(89% 0.09 252);
+    --foil-mid: oklch(77% 0.13 249);
+    --foil-to: oklch(85% 0.1 252);
+  }
+
+  /**
+   * A tinted panel — the typographic tiles on `/trends`.
+   *
+   * The photographs beside these carry a shadow and their own light. A flat fill
+   * next to them reads as an empty slot rather than as a card, however carefully
+   * the type inside is set, which is why these looked unfinished. So the panel
+   * gets the three things that make a surface look physical: a gradient standing
+   * in for a light source above and to the left, a hairline highlight along the
+   * top edge where that light catches, and a shadow underneath.
+   *
+   * The fill is `--color-gold-subtle` with a *translucent* sheen over it rather
+   * than a gradient between two mixed colours. Mixing would have to be tuned per
+   * theme — white into an already-96%-light tint is invisible, the same mix into
+   * a 24% one is a blowout — whereas an alpha overlay only needs its own two
+   * values and leaves the tint underneath untouched. Which means this follows the
+   * flavour switch for free: the token is already azure in the All Rounder
+   * edition, so the whole panel goes blue with it and nothing here mentions blue.
+   *
+   * `--shadow-edge` is the same top-edge highlight the composer and the glass
+   * icons carry, so every lit surface in the app takes light from one direction.
+   */
+  .tint-panel {
+    background-color: var(--color-gold-subtle);
+    background-image: linear-gradient(
+      158deg,
+      var(--panel-lift) 0%,
+      transparent 42%,
+      var(--panel-sink) 100%
+    );
+    box-shadow: var(--shadow-edge), var(--shadow-premium-sm);
+  }
+
+  /* Written here rather than as `hover:shadow-premium` in the markup: that
+   * utility would replace the whole `box-shadow`, taking the edge highlight with
+   * it, and the panel would flatten at the exact moment it is meant to lift. */
+  .tint-panel:hover {
+    box-shadow: var(--shadow-edge), var(--shadow-premium);
+  }
+
+  /* Ambient gold + azure wash. Painted on a pseudo-element behind content so
+   * it never intercepts pointer events and never inherits into children.
+   * Two off-canvas radial sources (warm top-left, cool bottom-right) read as
+   * light entering a room rather than as a gradient background. */
+  .ambient-canvas {
+    position: relative;
+    isolation: isolate;
+  }
+
+  /* Three light sources on a diagonal — warm upper-left, cool lower-right, and
+   * a faint warm bounce top-right — plus a corner vignette on dark.
+   *
+   * Sources sit *inside* the box (18%/82%, not -12%) so the visible part is the
+   * soft middle of the falloff. Anchoring them off-canvas clips the peak at the
+   * edge and reads as a hard band rather than as light in a room.
+   *
+   * `ellipse … closest-side` sizing in vw/vh keeps the composition proportional
+   * across viewports instead of shrinking to a corner blob on wide screens. */
+  .ambient-canvas::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    /* Dissolve the wash before the element's bottom edge. Without this the glow
+       terminates on the box boundary and leaves a visible horizontal seam where
+       the banner meets the first section — it reads as a rendering artifact. */
+    mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+    background: var(--ambient-wash);
+  }
+
+  /* The same wash with no positioning of its own, for surfaces that already own
+   * their `position` — the workspace's chat column is `fixed` as a bottom sheet
+   * on a phone and `static` as a column on a desktop, so it cannot also be the
+   * `relative` container `.ambient-canvas` expects. Drop this in as an
+   * absolutely-placed child instead. */
+  .ambient-wash {
+    background: var(--ambient-wash);
+  }
+
+  /* A single hairline that fades out — used to close a surface without the
+   * hard stop of a full-width border. */
+  .rule-fade {
+    background: linear-gradient(
+      to right,
+      transparent,
+      var(--color-border) 12%,
+      var(--color-border) 88%,
+      transparent
+    );
+  }
+
+  /* Display type: optical tracking correction. Large text needs negative
+   * tracking to look the same weight as body copy. */
+  .display-xl {
+    letter-spacing: -0.035em;
+    line-height: 1.02;
+  }
+
+  .display-lg {
+    letter-spacing: -0.028em;
+    line-height: 1.06;
+  }
+
+  /* Small tracked label above a heading. Used often enough that inlining six
+   * utilities every time invites drift. */
+  .text-eyebrow {
+    @apply text-[11px] font-semibold tracking-[0.14em] uppercase;
+  }
+
+  /* Stand-in for product/editorial photography that has not arrived yet.
+   * Imitates a lit seamless studio backdrop — off-centre highlight, warm bounce,
+   * corner falloff — because that is what the real images will be.
+   *
+   * Values are hard-coded rather than token-based, and that is the whole point:
+   * a photograph does not change colour when the user switches to light mode, so
+   * neither should its placeholder. An earlier version used `surface-raised`,
+   * which in light mode gave a pale card that the dark scrim below turned into a
+   * grey ramp — it read as a rendering bug, not a photo. Fixed dark tones also
+   * mean these cards look identical in both themes, exactly as they will once
+   * real imagery lands. */
+  .media-placeholder {
+    background-color: oklch(23% 0.008 60);
+    background-image:
+      radial-gradient(75% 65% at 30% 20%, oklch(100% 0 0 / 0.1), transparent 68%),
+      radial-gradient(55% 50% at 78% 86%, oklch(80% 0.13 85 / 0.11), transparent 70%),
+      radial-gradient(125% 125% at 50% 42%, transparent 38%, oklch(6% 0.004 60 / 0.5));
+  }
+
+  /* Bottom-up scrim, so overlaid titles stay legible over arbitrary photography.
+   *
+   * The ramp is tuned from the contrast maths, not by eye. White text needs its
+   * backdrop at ≲0.18 relative luminance for 4.5:1. A high-key subject (a cream
+   * sneaker on a yellow sweep, a pale studio table) sits around 0.65, and
+   * (1 − α) · 0.65 ≤ 0.18 means α ≳ 0.75 wherever type lands. Titles occupy
+   * roughly the bottom 0–30%, hence the near-opaque hold through that band
+   * before it falls away.
+   *
+   * It looks heavy in isolation and that is correct — this is how editorial
+   * card overlays are built. Weakening it only works until the first bright
+   * photograph. */
+  .media-scrim {
+    background: linear-gradient(
+      to top,
+      oklch(8% 0.004 60 / 0.93) 0%,
+      oklch(8% 0.004 60 / 0.85) 14%,
+      oklch(8% 0.004 60 / 0.68) 30%,
+      oklch(8% 0.004 60 / 0.38) 52%,
+      oklch(8% 0.004 60 / 0.12) 74%,
+      transparent 100%
+    );
+  }
+
+  /* Gold foil text — a slight vertical sheen, as on stamped foil.
+   * The three stops span a narrow lightness range (see --foil-*): a wide range
+   * makes the top and bottom of each glyph look like two different colours,
+   * which reads as muddy rather than metallic.
+   * `color` is set first as the fallback where background-clip:text is absent. */
+  .text-foil {
+    color: var(--foil-mid);
+    background: linear-gradient(
+      172deg,
+      var(--foil-from) 0%,
+      var(--foil-mid) 52%,
+      var(--foil-to) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
