@@ -25,7 +25,16 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
-  // `standalone` keeps container images small (no node_modules copy).
+  /**
+   * `standalone` keeps container images small (no node_modules copy).
+   *
+   * This is *not* what broke the Vercel build with
+   * `ENOENT … .next/next-server.js.nft.json`, despite being the only option that
+   * touches the output-tracing path the error comes from. The sibling project
+   * carries the identical line and deploys clean — the difference between them was
+   * the Next version, not this. Left alone deliberately, so the next person
+   * debugging a Vercel build does not spend an afternoon here.
+   */
   output: "standalone",
 
   // Never flip this to `true` — a red build is the point.
