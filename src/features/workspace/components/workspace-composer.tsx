@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import * as React from "react";
 
 import {
@@ -15,6 +16,7 @@ import {
   SEND_BUTTON,
   TYPE_MS,
 } from "@/components/layout/composer-styles";
+import { routes } from "@/config/routes";
 import { cn } from "@/lib/utils";
 
 /**
@@ -30,9 +32,16 @@ import { cn } from "@/lib/utils";
  *  - The field grows further before it scrolls — there is no Recents column
  *    underneath it to squeeze.
  *
- * Submitting is inert: there is no assistant behind it yet. The handler goes
- * through the form's real submit path anyway, so wiring one up later is a single
- * change here rather than a rewrite.
+ * ## `navigateOnSubmit`
+ *
+ * On the start page a submit is a *navigation* — the question becomes `?q=` and the
+ * page turns into the answered split view. In the split view itself a submit is a
+ * new turn in a thread that does not exist yet, so it stays inert.
+ *
+ * A boolean rather than an `onSubmit` callback because the caller is a Server
+ * Component and a function cannot cross that boundary. The alternative is a client
+ * wrapper whose entire job is to relay one handler, which is more moving parts for
+ * the same two behaviours.
  */
 
 const PROMPTS = [
@@ -47,7 +56,8 @@ const CATEGORIES = ["Clothing", "Shoes", "Bags", "Jewellery", "Watches"] as cons
 
 const HEADING_ID = "workspace-composer-heading";
 
-export function WorkspaceComposer() {
+export function WorkspaceComposer({ navigateOnSubmit = false }: { navigateOnSubmit?: boolean }) {
+  const router = useRouter();
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
   const [value, setValue] = React.useState("");
   const [focused, setFocused] = React.useState(false);
@@ -103,7 +113,11 @@ export function WorkspaceComposer() {
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        // Wire to the assistant once it exists.
+        const prompt = value.trim();
+        if (!navigateOnSubmit || prompt.length === 0) return;
+        // `push`, not `replace`: the start page is somewhere the user was and may
+        // well want back, and it is the only route that leads anywhere else.
+        router.push(routes.newChat(prompt));
       }}
       onClick={() => inputRef.current?.focus()}
       className={cn(

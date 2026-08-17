@@ -57,6 +57,31 @@ export const mockUser: MockUser = {
 };
 
 /**
+ * The concierge's opening line on the start page.
+ *
+ * Specific on purpose. "How can I help you today?" is the line every assistant
+ * opens with and it says nothing — it proves only that the page loaded. Naming an
+ * actual piece and an actual number proves the assistant was working while the
+ * user was away, which is the entire promise of the product.
+ *
+ * Which is also the constraint: every claim here has to be true of something in
+ * this file. The Tank is `mockSavedItems`, the Kelly is `mockMissions`. When the
+ * backend lands this becomes a generated brief, and a real one that invents a
+ * price movement is worse than no brief at all.
+ */
+export interface MockConciergeBriefing {
+  /** Two sentences at most. It sits above a composer, not in a thread. */
+  body: string;
+  /** What the reader can do about it, and where that goes. */
+  action: { label: string; href: string };
+}
+
+export const mockConciergeBriefing: MockConciergeBriefing = {
+  body: "Two of your missions moved while you were away. The Cartier Tank is $340 under where it sat on Tuesday, and a Kelly 25 in sellier has come up at a reseller I've checked out.",
+  action: { label: "Show me both", href: "/missions" },
+};
+
+/**
  * Snapi Memory — what the assistant has learned, grouped.
  *
  * Ordered by when each becomes useful: taste first (aesthetic, then categories),
