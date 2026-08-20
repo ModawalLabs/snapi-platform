@@ -57,6 +57,92 @@ export const mockUser: MockUser = {
 };
 
 /**
+ * Worked examples for an empty missions board.
+ *
+ * Every one is an *occasion or a project*, never a single product — because that is
+ * the thing about missions a new user does not guess. "A winter coat" is a search;
+ * "furnishing a first flat" is a standing brief with a dozen decisions in it, and
+ * only the second kind explains why the feature exists.
+ *
+ * `brief` is the payload and it is written to be read: each one carries a
+ * constraint, a budget and a bit of context, because tapping a starter drops it
+ * into the field where the user can see what a good brief looks like before editing
+ * it. The label sells the idea; the brief teaches the form.
+ *
+ * The photography is mood, not subject — there are no interiors or luggage in the
+ * asset set, and this file's editorial covers have always been freely reassignable
+ * (see `mockEditStories`). All five sources are 3:2, which is the plate's own
+ * ratio, so nothing is cropped. Replace with real art before launch; the pairing is
+ * the one thing here that would read as careless at full size.
+ */
+export interface MockMissionStarter {
+  id: string;
+  /**
+   * The occasion, in a few words. An occasion or a project, never a product.
+   *
+   * No longer printed on the card — the cards are a row of five now and a title on
+   * each made them read as five articles to choose between rather than as examples.
+   * It is the button's accessible name instead, which is the one place a title is
+   * still needed: "Use this brief" five times over tells a screen-reader user nothing.
+   */
+  label: string;
+  /** The one line the card shows. */
+  hint: string;
+  /** What lands in the brief field — a worked example, not a placeholder. */
+  brief: string;
+  image: ImageSource;
+  focus?: string;
+}
+
+export const mockMissionStarters: MockMissionStarter[] = [
+  {
+    id: "ms1",
+    label: "Furnishing a first flat",
+    hint: "A whole room, in one brief.",
+    brief:
+      "Furnishing a first flat — a sofa, a floor lamp and a rug that look considered together, under $2,000 for all three.",
+    image: heroBackpack,
+    focus: "object-[62%_55%]",
+  },
+  {
+    id: "ms2",
+    label: "A September wedding",
+    hint: "Dress for the day, not the shop.",
+    brief:
+      "Guest at an outdoor wedding in September — something for a warm afternoon that still works once it cools, under $600.",
+    image: heroParty,
+    focus: "object-[52%_35%]",
+  },
+  {
+    id: "ms3",
+    label: "Two weeks in Kyoto",
+    hint: "Pack for the weather, and the walking.",
+    brief:
+      "Two weeks in Kyoto in November — layers for 8–15°C, and shoes I can genuinely walk 15km a day in.",
+    image: heroPuffer,
+    focus: "object-[66%_38%]",
+  },
+  {
+    id: "ms4",
+    label: "Moving somewhere colder",
+    hint: "A coat, boots and knitwear that agree.",
+    brief:
+      "Moving to a city that gets properly cold — a coat, boots and two or three knits that work together at 0–8°C, about $2,000 for all of it.",
+    image: heroRain,
+    focus: "object-[66%_45%]",
+  },
+  {
+    id: "ms5",
+    label: "Best man in July",
+    hint: "Standing up, in the heat, on camera.",
+    brief:
+      "Best man at a July wedding — suit, shirt and shoes that survive a hot afternoon and close-up photographs, up to $1,400 together.",
+    image: heroTailoring,
+    focus: "object-[54%_42%]",
+  },
+];
+
+/**
  * The concierge's opening line on the start page.
  *
  * Specific on purpose. "How can I help you today?" is the line every assistant
@@ -312,84 +398,41 @@ export interface MockMission {
 }
 
 /**
- * Covers are assigned fixed, not shuffled.
+ * Exactly one mission, and the count is the design decision.
  *
- * A `Math.random()` pick renders one image on the server and another on the
- * client — a hydration mismatch — and a different one on every request, so the
- * page flickers and never caches. Varying imagery has to come from a stable seed
- * or the data layer, never from render-time randomness.
+ * One is enough to show the card, the status chip, the budget and the collections
+ * count doing their jobs, and it is what a real account looks like a minute after
+ * someone writes their first brief. Five fixtures used to live here and they made the
+ * board look like a finished product nobody had used — which hid the two states that
+ * actually matter, the empty board and the first card on it. Deleting one mission in
+ * the UI still reaches the onboarding, so both are one click apart.
  *
- * Within that constraint the pairing is one photo per mission, chosen for how the
- * subject survives a 3:4 crop. Four content matches came free (bag, atelier,
- * Mediterranean, footwear) and were kept.
+ * `running` rather than `found`, because that is the state that says what a mission
+ * *is*: a standing instruction being swept, not a saved search with results attached.
+ *
+ * The cover is assigned by hand, and it has to be. A `Math.random()` pick renders one
+ * image on the server and another on the client — a hydration mismatch — and a
+ * different one per request, so the page flickers and never caches. The `focus` below
+ * belongs to this photograph, not to this mission: 1600×1066 landscape into a 3:4 box
+ * keeps only the middle half of the width, and a centre crop lands beside the subject
+ * rather than on her.
+ *
+ * Every consumer already handles both this and an empty array: `MissionsBoard` seeds
+ * its state from it, `/missions/[id]` resolves against it, and `ChatStart` reads it
+ * for "In motion".
  */
-
 export const mockMissions: MockMission[] = [
   {
     id: "m1",
-    name: "Kelly 25, sellier",
-    brief: "Hermès Kelly 25 in sellier stitch, Etoupe or Gold, hardware either way.",
-    status: "found",
-    budget: { amount: 1600000, currency: "USD" },
-    collections: 2,
-    lastSweptAt: "2026-08-08T06:20:00.000Z",
-    createdAt: "2026-05-02T10:00:00.000Z",
-    image: streetStyleFurCoat,
-    // 1600×1066 landscape into a 3:4 box keeps only the middle half of the width.
-    // A centre crop lands between the bag and the subject and gets neither, so
-    // this pushes the window right onto her.
-    focus: "object-[85%_50%]",
-  },
-  {
-    id: "m2",
     name: "A winter coat that isn't black",
-    brief: "Wool or wool-cashmere, mid-calf, camel/oatmeal/charcoal. No logos.",
+    brief: "Wool or wool-cashmere, mid-calf, camel/oatmeal/charcoal. No logos, no belt.",
     status: "running",
     budget: { amount: 280000, currency: "USD" },
-    collections: 11,
-    lastSweptAt: "2026-08-08T04:45:00.000Z",
-    createdAt: "2026-07-14T19:30:00.000Z",
-    image: atelierMannequin,
-    focus: "object-[50%_45%]",
-  },
-  {
-    id: "m3",
-    name: "Cartier Tank, pre-1990",
-    brief: "Manual wind, original dial, papers preferred. Vetted resellers only.",
-    status: "watching",
-    budget: { amount: 950000, currency: "USD" },
-    collections: 4,
-    lastSweptAt: "2026-08-07T21:10:00.000Z",
-    createdAt: "2026-03-21T08:15:00.000Z",
-    image: bridalLight,
-    focus: "object-[45%_50%]",
-  },
-  {
-    id: "m4",
-    name: "Amalfi wedding, September",
-    brief: "Two looks, one evening. Silk or linen, packs without creasing, FR 38.",
-    status: "watching",
-    // No ceiling given — keeps the nullable branch exercised for the mission page.
-    budget: null,
-    collections: 6,
-    lastSweptAt: "2026-08-06T13:05:00.000Z",
-    createdAt: "2026-06-08T12:40:00.000Z",
-    image: poolsideResort,
-    focus: "object-[50%_45%]",
-  },
-  {
-    id: "m5",
-    name: "Loafers I can walk 10km in",
-    brief: "Rubber or combination sole, unlined suede, EU 42. Broken in fast.",
-    status: "done",
-    budget: { amount: 140000, currency: "USD" },
     collections: 3,
-    lastSweptAt: "2026-07-30T09:55:00.000Z",
-    createdAt: "2026-05-29T17:20:00.000Z",
-    image: sneakersStudio,
-    // Framed low — the shoes sit near the bottom edge. Pushed down so the crop
-    // keeps them, and high enough in the box that the caption does not cover them.
-    focus: "object-[50%_75%]",
+    lastSweptAt: "2026-08-18T06:20:00.000Z",
+    createdAt: "2026-08-11T19:30:00.000Z",
+    image: streetStyleFurCoat,
+    focus: "object-[85%_50%]",
   },
 ];
 
@@ -495,41 +538,6 @@ export const mockHeroPrompts: Record<Flavour, MockHeroPrompt[]> = {
     },
   ],
 };
-
-/** Aspirational cards in the top banner. Type-led — no imagery by design. */
-export interface MockHeroCard {
-  id: string;
-  title: string;
-  copy: string;
-  href: string;
-}
-
-export const mockHeroCards: MockHeroCard[] = [
-  {
-    id: "h1",
-    title: "Investment Pieces",
-    copy: "Items that historically hold or gain value. Snapi tracks the resale floor.",
-    href: "/c/investment-pieces",
-  },
-  {
-    id: "h2",
-    title: "Archive Finds",
-    copy: "Discontinued and past-season pieces, surfaced from vetted resellers.",
-    href: "/c/archive",
-  },
-  {
-    id: "h3",
-    title: "Quiet Luxury",
-    copy: "Unbranded craft. Cashmere, calfskin, and cut over monograms.",
-    href: "/c/quiet-luxury",
-  },
-  {
-    id: "h4",
-    title: "Seasonal highlights",
-    copy: "Bespoke and personalised commissions, with realistic lead times.",
-    href: "/c/made-to-order",
-  },
-];
 
 /**
  * "The Edit" — the editorial archive.
@@ -1361,6 +1369,77 @@ export const mockSavedItems: MockSavedItem[] = [
   },
 ];
 
+/**
+ * The cart — five pieces, and five is the point.
+ *
+ * A cart is a decision that has nearly been made, so it is short by nature. The
+ * fixture is deliberately a subset of the saved list rather than its own inventory:
+ * these are pieces that were set aside and then chosen, which is the actual path
+ * through the product, and it means the two pages share photography instead of
+ * doubling the asset budget to look different.
+ *
+ * Typed as `MockSavedItem` rather than a `MockCartItem` twin, because today a cart
+ * line and a saved line carry exactly the same fields and a second identical interface
+ * would be two things to keep in step for no gain. `savedAt` reads as "added" here —
+ * the tile's label is a prop for that reason. When quantity, size and a reserved price
+ * arrive, that is the moment the cart earns its own type, and the field that forces it
+ * will be quantity.
+ *
+ * Dates are recent by design: a cart holding something added two months ago is an
+ * abandoned cart, which is a different screen with different copy.
+ */
+export const mockCartItems: MockSavedItem[] = [
+  {
+    id: "c1",
+    slug: "burberry-kensington-heritage-trench",
+    brand: "Burberry",
+    name: "Kensington Heritage Trench Coat",
+    price: { amount: 219000, currency: "USD" },
+    savedAt: "2026-08-18T09:12:00.000Z",
+    image: heroRain,
+    focus: "object-[66%_45%]",
+  },
+  {
+    id: "c2",
+    slug: "chanel-classic-flap-medium",
+    brand: "Chanel",
+    name: "Classic Flap Bag",
+    price: { amount: 1080000, currency: "USD" },
+    savedAt: "2026-08-16T18:40:00.000Z",
+    image: heroBackpack,
+    focus: "object-[62%_55%]",
+  },
+  {
+    id: "c3",
+    slug: "cartier-love-bracelet-yellow-gold",
+    brand: "Cartier",
+    name: "Love Bracelet",
+    price: { amount: 735000, currency: "USD" },
+    savedAt: "2026-08-14T11:05:00.000Z",
+    image: heroParty,
+    focus: "object-[52%_35%]",
+  },
+  {
+    id: "c4",
+    slug: "loro-piana-baby-cashmere-scarf",
+    brand: "Loro Piana",
+    name: "Baby Cashmere Scarf",
+    price: { amount: 127500, currency: "USD" },
+    savedAt: "2026-08-11T15:28:00.000Z",
+    image: streetStyleFurCoat,
+    focus: "object-[60%_38%]",
+  },
+  {
+    id: "c5",
+    slug: "hermes-oran-sandal",
+    brand: "Hermès",
+    name: "Oran Sandal",
+    price: { amount: 79000, currency: "USD" },
+    savedAt: "2026-08-08T08:02:00.000Z",
+    image: resortSlipTall,
+  },
+];
+
 /* ===========================================================================
  * Workspace — the full-screen chat + products surface
  * ========================================================================= */
@@ -1392,8 +1471,41 @@ export interface MockProduct {
   price: Money;
   /** Where it is actually buyable. Trust matters more than price on resale. */
   merchant: string;
+  /**
+   * ⚠️ The merchant's *homepage*, not this listing.
+   *
+   * A real feed supplies a deep link to the product itself, and that is what belongs
+   * here. These are bare domains on purpose: inventing a path on a real retailer's
+   * site produces a URL that 404s for anyone who clicks it, and a Buy button that
+   * lands on an error page is worse than one that lands on a homepage.
+   *
+   * Same class of caveat as `PLACEHOLDER_LOGOS`. These are genuine houses named as
+   * the seller of mock inventory they may not carry, so the pairing is a claim the
+   * data cannot back. Fine for a design review, not fine in front of traffic —
+   * replace with feed URLs before launch.
+   */
+  vendorUrl: string;
   /** One line on why this answers the brief. */
   matchNote: string;
+  /**
+   * Catalogue prose — what the piece *is*, in two or three sentences.
+   *
+   * Distinct from `matchNote`, and the difference is load-bearing: the note is Snapi's
+   * argument for why this answers *your* brief, and would read differently for a
+   * different search. This is the listing's own description and does not change.
+   */
+  description: string;
+  /**
+   * The facts a buyer decides on, in the order they decide on them.
+   *
+   * A list rather than named fields, because a coat has a back length and a watch has
+   * a case width, and a schema with `caseWidth` on a coat is a schema that will be
+   * fought. The labels are the seller's; the renderer only lines them up.
+   *
+   * These are also the rows `ProductComparison` should read once it can — see the note
+   * there about having only price to compare on.
+   */
+  details: Array<{ label: string; value: string }>;
   /** Scarcity or condition marker. `null` for most — a badge on everything is wallpaper. */
   badge: string | null;
   image: ImageSource | null;
@@ -1420,11 +1532,20 @@ export interface MockProduct {
 export const mockProducts: MockProduct[] = [
   {
     id: "pr1",
+    description:
+      "A Kelly 25 in sellier construction — the stiffer of the two builds, stitched so the bag holds its shape rather than slouching into it. Epsom leather takes a scratch far better than Togo, which is why it is the one most often bought to actually carry. Papers and a dated stamp present.",
+    details: [
+      { label: "Material", value: "Epsom calfskin, palladium hardware" },
+      { label: "Measurements", value: "25 × 19 × 9 cm" },
+      { label: "Condition", value: "Pristine · no corner wear" },
+      { label: "Included", value: "Box, clochette, lock, two keys, rain cover" },
+    ],
     slug: "hermes-kelly-25-sellier-etoupe",
     brand: "Hermès",
     name: "Kelly 25 Sellier",
     price: { amount: 1485000, currency: "USD" },
     merchant: "Madison Avenue Couture",
+    vendorUrl: "https://www.madisonavenuecouture.com",
     matchNote: "Etoupe with gold hardware — the exact spec, and under your ceiling.",
     badge: "Verified",
     image: streetStyleFurCoat,
@@ -1432,11 +1553,20 @@ export const mockProducts: MockProduct[] = [
   },
   {
     id: "pr2",
+    description:
+      "The retourné build, stitched inside out so the leather softens with use and the corners round off over a decade rather than staying square. One size up on the 25, which is the difference between a bag that takes a slim laptop and one that does not.",
+    details: [
+      { label: "Material", value: "Togo calfskin, gold hardware" },
+      { label: "Measurements", value: "28 × 22 × 10 cm" },
+      { label: "Condition", value: "Excellent · light corner softening" },
+      { label: "Included", value: "Box, clochette, lock, one key" },
+    ],
     slug: "hermes-kelly-28-retourne-gold",
     brand: "Hermès",
     name: "Kelly 28 Retourné",
     price: { amount: 1620000, currency: "USD" },
     merchant: "Fashionphile",
+    vendorUrl: "https://www.fashionphile.com",
     matchNote: "Softer stitch and one size up. Slightly over, so flagged not hidden.",
     badge: null,
     image: atelierMannequin,
@@ -1444,11 +1574,20 @@ export const mockProducts: MockProduct[] = [
   },
   {
     id: "pr3",
+    description:
+      "Storm System is a treatment rather than a fabric: a membrane bonded behind the cashmere so it turns rain without the weight or the rustle of a shell. Mid-calf, unlined through the body, and completely unbranded on the outside.",
+    details: [
+      { label: "Material", value: "Baby cashmere, Storm System membrane" },
+      { label: "Measurements", value: "Mid-calf · 118 cm back length" },
+      { label: "Condition", value: "New with tags" },
+      { label: "Included", value: "Garment bag, spare buttons" },
+    ],
     slug: "loro-piana-cashmere-storm-coat",
     brand: "Loro Piana",
     name: "Cashmere Storm System Coat",
     price: { amount: 745000, currency: "USD" },
     merchant: "Loro Piana",
+    vendorUrl: "https://www.loropiana.com",
     matchNote: "Mid-calf, oatmeal, no visible branding anywhere on it.",
     badge: null,
     image: bridalLight,
@@ -1456,11 +1595,20 @@ export const mockProducts: MockProduct[] = [
   },
   {
     id: "pr4",
+    description:
+      "An unstructured shoulder and a straight fall from it — the cut The Row is bought for, and the reason it reads as expensive from across a room with no logo to help. Camel wool that holds a press through a winter.",
+    details: [
+      { label: "Material", value: "Virgin wool, viscose lining" },
+      { label: "Measurements", value: "Oversized · 112 cm back length" },
+      { label: "Condition", value: "New with tags" },
+      { label: "Included", value: "Garment bag" },
+    ],
     slug: "the-row-camel-wool-coat",
     brand: "The Row",
     name: "Elmira Wool Coat",
     price: { amount: 449000, currency: "USD" },
     merchant: "Net-a-Porter",
+    vendorUrl: "https://www.net-a-porter.com",
     matchNote: "Camel, unstructured shoulder. Closest thing to your saved trench.",
     badge: "Low stock",
     image: poolsideResort,
@@ -1468,11 +1616,20 @@ export const mockProducts: MockProduct[] = [
   },
   {
     id: "pr5",
+    description:
+      "A Tank Louis on its original dial, unpolished and unredialled, which is the pairing that decides the resale floor on a watch this age. Manual wind, so it stops if you do — and the papers are present, which most 1978 examples cannot say.",
+    details: [
+      { label: "Material", value: "18k yellow gold, sapphire cabochon crown" },
+      { label: "Measurements", value: "23 × 30 mm case · 16 cm strap" },
+      { label: "Condition", value: "Very good · original dial, unpolished case" },
+      { label: "Included", value: "Papers, service record, later strap" },
+    ],
     slug: "cartier-tank-louis-1978",
     brand: "Cartier",
     name: "Tank Louis, 1978",
     price: { amount: 890000, currency: "USD" },
     merchant: "Watches of Switzerland",
+    vendorUrl: "https://www.watchesofswitzerland.com",
     matchNote: "Manual wind, original dial, papers present. Pre-1990 as asked.",
     badge: "Archive",
     image: heroTailoring,
@@ -1480,11 +1637,20 @@ export const mockProducts: MockProduct[] = [
   },
   {
     id: "pr6",
+    description:
+      "The rubber-studded sole is the whole point: a walkable loafer that does not announce itself as a walking shoe. Unlined suede, so it takes the shape of the foot within a week and never quite goes back.",
+    details: [
+      { label: "Material", value: "Suede, rubber-studded sole" },
+      { label: "Measurements", value: "EU 42 · runs true" },
+      { label: "Condition", value: "New in box" },
+      { label: "Included", value: "Box, dust bags, spare laces" },
+    ],
     slug: "loro-piana-summer-walk-chocolate",
     brand: "Loro Piana",
     name: "Summer Walk Loafers",
     price: { amount: 119500, currency: "USD" },
     merchant: "Mr Porter",
+    vendorUrl: "https://www.mrporter.com",
     matchNote: "Rubber-studded sole. The one pair here you can genuinely walk in.",
     badge: null,
     // 1012×1800 — 9:16. Outside the crop band, so this one letterboxes onto the
@@ -1493,11 +1659,20 @@ export const mockProducts: MockProduct[] = [
   },
   {
     id: "pr7",
+    description:
+      "Intrecciato woven by hand, which is why no two panels align identically and why a repair is possible at all. Unlined and soft from the first wear; the leather is thin enough that a half size up is the safer buy.",
+    details: [
+      { label: "Material", value: "Woven lambskin, leather sole" },
+      { label: "Measurements", value: "EU 41 · runs a half size large" },
+      { label: "Condition", value: "New in box" },
+      { label: "Included", value: "Box, dust bags" },
+    ],
     slug: "bottega-veneta-intrecciato-loafer",
     brand: "Bottega Veneta",
     name: "Intrecciato Loafer",
     price: { amount: 128000, currency: "USD" },
     merchant: "Bottega Veneta",
+    vendorUrl: "https://www.bottegaveneta.com",
     matchNote: "Unlined suede, breaks in fast. Runs a half size large.",
     badge: null,
     image: heroBag,
@@ -1505,11 +1680,20 @@ export const mockProducts: MockProduct[] = [
   },
   {
     id: "pr8",
+    description:
+      "Linen cut loosely enough to hang rather than cling, in the undyed shade that reads as deliberate rather than unfinished. It creases — that is linen — and it is the two-piece that survives an August wedding in a hot room.",
+    details: [
+      { label: "Material", value: "Washed linen, unlined" },
+      { label: "Measurements", value: "IT 50 · relaxed through the shoulder" },
+      { label: "Condition", value: "New with tags" },
+      { label: "Included", value: "Garment bag, spare buttons" },
+    ],
     slug: "brunello-cucinelli-linen-suit",
     brand: "Brunello Cucinelli",
     name: "Linen Two-Piece",
     price: { amount: 398000, currency: "USD" },
     merchant: "Brunello Cucinelli",
+    vendorUrl: "https://www.brunellocucinelli.com",
     matchNote: "Packs without creasing — the reason it beat the silk options.",
     badge: null,
     image: heroRain,
@@ -1517,11 +1701,20 @@ export const mockProducts: MockProduct[] = [
   },
   {
     id: "pr9",
+    description:
+      "Bias-cut silk, which is what makes a slip fall in a line instead of a tube, and what makes it unforgiving of a bad alteration. Straight neck, no lining, and heavy enough at 22 momme not to cling.",
+    details: [
+      { label: "Material", value: "22-momme silk charmeuse" },
+      { label: "Measurements", value: "UK 10 · 132 cm length" },
+      { label: "Condition", value: "Excellent · worn once" },
+      { label: "Included", value: "Garment bag" },
+    ],
     slug: "khaite-silk-slip-dress-navy",
     brand: "Khaite",
     name: "Silk Slip Dress",
     price: { amount: 178000, currency: "USD" },
     merchant: "Matches",
+    vendorUrl: "https://www.matchesfashion.com",
     matchNote: "Navy, no embellishment. Reads as evening without reading as bridal.",
     badge: null,
     // 900×1800 — a 1:2 full-length shot, the shape a square would decapitate.

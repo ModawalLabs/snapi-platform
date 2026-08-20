@@ -89,7 +89,7 @@ export function AppSidebar() {
           "z-50 flex shrink-0 flex-col border-r bg-surface/70 backdrop-blur-2xl",
           // Fixed overlay on mobile, in-flow column from md up.
           "fixed inset-y-0 left-0 md:sticky md:top-0 md:h-dvh md:translate-x-0",
-          "transition-[width,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+          "transition-[width,translate] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
           // Tooltips in the rail escape horizontally, so x-overflow must stay visible.
           "overflow-x-visible",

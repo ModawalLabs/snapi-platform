@@ -36,7 +36,7 @@ export function Tooltip({
         "flex items-center gap-2 rounded-md border border-border bg-overlay text-content shadow-premium",
         "px-2.5 py-1.5 text-xs font-medium whitespace-nowrap",
         // Slight inward offset on the hidden state gives the reveal direction.
-        "-translate-x-1 opacity-0 transition-[opacity,transform] duration-150 ease-out",
+        "-translate-x-1 opacity-0 transition-[opacity,translate] duration-150 ease-out",
         "group-hover:translate-x-0 group-hover:opacity-100",
         "group-focus-visible:translate-x-0 group-focus-visible:opacity-100",
         className,

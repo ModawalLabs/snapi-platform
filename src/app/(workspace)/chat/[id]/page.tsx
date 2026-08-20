@@ -21,11 +21,21 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 }
 
 /** `/chat/:id` — a past conversation, reopened as a workspace. */
-export default async function ChatWorkspacePage({ params }: { params: Params }) {
+export default async function ChatWorkspacePage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  /** `?p=<slug>` opens that product in the results pane. */
+  searchParams: Promise<{ p?: string }>;
+}) {
   const { id } = await params;
   const conversation = find(id);
 
   if (!conversation) notFound();
 
-  return <Workspace {...chatSeed(conversation)} />;
+  // Trimmed, so `?p=` and `?p=%20` both mean "no product".
+  const productSlug = (await searchParams).p?.trim() || undefined;
+
+  return <Workspace {...chatSeed(conversation)} productSlug={productSlug} />;
 }

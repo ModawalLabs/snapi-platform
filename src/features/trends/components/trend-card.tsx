@@ -53,7 +53,7 @@ export function TrendCard({ product }: { product: MockTrendProduct }) {
         sizes="(min-width: 1024px) 45vw, (min-width: 640px) 60vw, 92vw"
         className={cn(
           "h-full w-full rounded-xl shadow-premium-sm",
-          "transition-[box-shadow,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+          "transition-[box-shadow,translate] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
           "group-hover:-translate-y-1 group-hover:shadow-premium",
         )}
       >
@@ -109,7 +109,7 @@ export function TrendTile({ tile }: { tile: MockTrendTile }) {
       href={routes.newChat(tile.query)}
       className={cn(
         "tint-panel group flex h-full flex-col justify-between rounded-xl border border-gold-border p-5",
-        "transition-[background-color,border-color,box-shadow,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+        "transition-[background-color,border-color,box-shadow,translate] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
         "hover:-translate-y-1",
         "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring",
       )}

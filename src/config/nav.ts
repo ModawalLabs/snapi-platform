@@ -1,4 +1,4 @@
-import { Bookmark, ConciergeBell, House, Radar, type LucideIcon } from "lucide-react";
+import { Bookmark, ConciergeBell, House, Radar, ShoppingBag, type LucideIcon } from "lucide-react";
 
 import { routes } from "@/config/routes";
 
@@ -16,7 +16,10 @@ import { routes } from "@/config/routes";
  *  3. Missions  — background agent work. It changes without the user acting, so
  *                 it sits high and carries a live count. Anything that can
  *                 update on its own needs to be glanceable.
- *  4. Snapi List— saved items. Intentional, lower-frequency, no urgency.
+ *  4. Cart      — what has been chosen. Above the list because it is the nearer
+ *                 end of the same funnel: everything in it is one step from bought,
+ *                 and a cart you have to hunt for is a cart you forget you filled.
+ *  5. Snapi List— saved items. Intentional, lower-frequency, no urgency.
  *
  * ## Concierge, not "New chat"
  *
@@ -47,7 +50,7 @@ export interface SidebarNavItem {
 export const sidebarNav: SidebarNavItem[] = [
   {
     title: "Concierge",
-    href: routes.newChat(),
+    href: routes.concierge(),
     icon: ConciergeBell,
     description: "Your briefing, and somewhere to begin",
   },
@@ -63,6 +66,15 @@ export const sidebarNav: SidebarNavItem[] = [
     icon: Radar,
     badgeKey: "missions",
     description: "Agents working in the background",
+  },
+  {
+    title: "Cart",
+    href: routes.cart(),
+    // The same glyph as "Add to cart" on a product page, which is the only place a
+    // piece enters this page from. A different icon for the same idea reads as a
+    // different feature.
+    icon: ShoppingBag,
+    description: "Ready to check out",
   },
   {
     title: "Snapi List",

@@ -56,17 +56,6 @@ export function formatDate(date: Date | string | number, locale = "en-US"): stri
   }).format(new Date(date));
 }
 
-/** URL-safe slug. */
-export function slugify(input: string): string {
-  return input
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "") // strip combining diacritics
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
 /** Clamp, because `Math.min(Math.max(...))` inline is unreadable. */
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);

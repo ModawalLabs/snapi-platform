@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { PageHeader } from "@/components/ui/page-header";
 import { MissionCard } from "@/features/missions/components/mission-card";
+import { MissionOnboarding } from "@/features/missions/components/mission-onboarding";
 import { NewMissionCard } from "@/features/missions/components/new-mission-card";
 import { usePendingRemoval } from "@/hooks/use-pending-removal";
 import { mockMissions, type MockMission } from "@/lib/mock-data";
@@ -43,9 +44,23 @@ export function MissionsBoard() {
   const idPrefix = React.useId();
   const created = React.useRef(0);
 
+  /**
+   * Whether the onboarding page is up.
+   *
+   * The board is either the grid or the composer, never both — the composer *is* the
+   * page while it is open, which is what lets it carry the masthead and the worked
+   * examples at full size. A dialog over the grid was the other option and would have
+   * meant a scrim, a focus trap and a scroll lock to show the same content smaller.
+   */
+  const [composing, setComposing] = React.useState(false);
+
   const handleCreate = React.useCallback(
     (brief: string) => {
       created.current += 1;
+      // Back to the board, which is where the mission the user just wrote now is.
+      // Staying put would leave them looking at an empty field with no sign that
+      // anything happened.
+      setComposing(false);
 
       setItems((current) => [
         {
@@ -81,6 +96,25 @@ export function MissionsBoard() {
     [setItems],
   );
 
+  /**
+   * The composer takes the page, in both the situations that reach it.
+   *
+   * An empty board gets it unasked — there is nothing else to show, and no way back,
+   * which is why `onCancel` is withheld there. Pressing New mission on a board that
+   * has missions gets the same page with a way out.
+   *
+   * `items`, not `visibleCount`, for the empty test: during the undo window after
+   * deleting the last mission the card is still on screen, dimmed, and swapping the
+   * whole page out from under it would take the Undo button with it.
+   */
+  if (items.length === 0) return <MissionOnboarding onCreate={handleCreate} />;
+
+  if (composing) {
+    return (
+      <MissionOnboarding returning onCreate={handleCreate} onCancel={() => setComposing(false)} />
+    );
+  }
+
   return (
     <>
       <PageHeader
@@ -95,7 +129,7 @@ export function MissionsBoard() {
           {/* The compose tile leads the grid — the conventional place for "add",
               and it keeps its position as missions come and go. */}
           <li>
-            <NewMissionCard onCreate={handleCreate} />
+            <NewMissionCard onStart={() => setComposing(true)} />
           </li>
 
           {items.map((mission) => {

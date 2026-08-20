@@ -19,16 +19,31 @@ interface ComposerContextValue {
   openComposer: () => void;
   closeComposer: () => void;
   toggleComposer: () => void;
+  /**
+   * Increments each time something asks for the cursor.
+   *
+   * A counter rather than a boolean, because the request has no "off" state — the
+   * same page can ask twice in a row and a flag flipped to `true` twice is one
+   * event. Whoever owns a field watches this and focuses when it changes.
+   *
+   * It exists for the Concierge page, which renders its own composer and so has no
+   * dock to open: the Ask Snapi button asks for focus there instead of toggling
+   * something that is not on screen.
+   */
+  focusToken: number;
+  requestFocus: () => void;
 }
 
 const ComposerContext = React.createContext<ComposerContextValue | null>(null);
 
 export function ComposerProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = React.useState(false);
+  const [focusToken, setFocusToken] = React.useState(0);
 
   const openComposer = React.useCallback(() => setOpen(true), []);
   const closeComposer = React.useCallback(() => setOpen(false), []);
   const toggleComposer = React.useCallback(() => setOpen((current) => !current), []);
+  const requestFocus = React.useCallback(() => setFocusToken((token) => token + 1), []);
 
   // Escape dismisses it, the way it dismisses any transient surface. Bound only
   // while open, so it never competes with the sidebar drawer's own handler.
@@ -44,8 +59,8 @@ export function ComposerProvider({ children }: { children: React.ReactNode }) {
   }, [open]);
 
   const value = React.useMemo(
-    () => ({ open, openComposer, closeComposer, toggleComposer }),
-    [open, openComposer, closeComposer, toggleComposer],
+    () => ({ open, openComposer, closeComposer, toggleComposer, focusToken, requestFocus }),
+    [open, openComposer, closeComposer, toggleComposer, focusToken, requestFocus],
   );
 
   return <ComposerContext.Provider value={value}>{children}</ComposerContext.Provider>;

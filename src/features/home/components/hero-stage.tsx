@@ -157,7 +157,7 @@ export function HeroStage({
             href={routes.newChat(active.text)}
             className={cn(
               "group flex items-center gap-2.5 rounded-full border py-2.5 pr-4 pl-4 focus-visible:outline-ring",
-              "backdrop-blur-xl transition-[background-color,border-color,box-shadow,transform] duration-500",
+              "backdrop-blur-xl transition-[background-color,border-color,box-shadow,translate] duration-500",
               "hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2",
               "sm:min-w-[20rem]",
               hasBackdrop

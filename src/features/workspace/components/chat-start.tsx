@@ -1,10 +1,9 @@
-import { ArrowRight, ArrowUpRight, Bookmark, Radar, X } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Bookmark, Radar } from "lucide-react";
 import Link from "next/link";
 import type * as React from "react";
 
-import { Logo } from "@/components/layout/logo";
 import { routes } from "@/config/routes";
-import { WorkspaceComposer } from "@/features/workspace/components/workspace-composer";
+import { ConciergeComposer } from "@/features/workspace/components/concierge-composer";
 import {
   mockConciergeBriefing,
   mockCounts,
@@ -20,11 +19,13 @@ import { MODALITY_ICON, MODALITY_LABEL } from "@/lib/modality";
 import { cn, formatPrice } from "@/lib/utils";
 
 /**
- * `/chat` with nothing asked yet — where a session begins.
+ * `/concierge` — where a session begins.
  *
- * The blank state of the same surface `Workspace` renders answered, which is why
- * it shares the route. Submit the composer and `?q=` sends you to the split view;
- * come back with an empty query and you land here.
+ * Inside the `(app)` shell, so it sits beside the sidebar rather than taking the
+ * window. It was full screen at `/chat` and that was the wrong shape: a briefing is
+ * somewhere you *are*, and covering the app to show you your own missions makes
+ * leaving them the price of reading them. Submitting the composer is what escalates
+ * to full screen — `?q=` hands off to `Workspace` at `/chat`.
  *
  * ## The composition: one centred column
  *
@@ -73,8 +74,8 @@ import { cn, formatPrice } from "@/lib/utils";
  * to the start of its animation.
  *
  * A Server Component apart from the composer. The date is stamped on the server,
- * which is safe because this route is already dynamic (it reads `?q=`) — the same
- * value in a Client Component would be a hydration mismatch waiting for midnight.
+ * which a Client Component could not do without risking a hydration mismatch at
+ * midnight.
  */
 
 /**
@@ -104,16 +105,15 @@ export function ChatStart() {
     .slice(0, 3);
 
   return (
+    // `min-h-dvh` still, even inside the shell: this is the main region of a page
+    // whose own footer band belongs at the bottom of the window, and the content
+    // above it is too short to get there on its own.
+    //
+    // It carried a logo and a close button while it was full screen. Both are gone
+    // — the sidebar provides the mark and the way out, and repeating them here
+    // would be two controls going to the same place.
     <div className="ambient-canvas relative flex min-h-dvh flex-col">
-      <header className="flex h-16 shrink-0 items-center justify-between gap-4 px-5 sm:px-8">
-        {/* The logo is not a link back: the close button is right beside it and does
-            that job explicitly, and two controls going to the same place is one
-            control too many. */}
-        <Logo />
-        <CloseButton />
-      </header>
-
-      <main className="flex flex-1 flex-col justify-center px-5 pt-2 pb-10 sm:px-8 lg:pb-14">
+      <div className="flex flex-1 flex-col justify-center px-5 pt-14 pb-10 sm:px-8 lg:pb-14">
         {/* Centred on the page and centred *as* type, now that there is nothing
             beside it to balance against. `max-w-3xl` is the measure: centred text
             past ~70 characters loses the start of the next line, and the composer
@@ -147,10 +147,10 @@ export function ChatStart() {
               This is also the one place a submit does something: it becomes `?q=`
               and the page turns into the answered split view. */}
           <div className={cn("mt-8 text-left", REVEAL, "delay-300")}>
-            <WorkspaceComposer navigateOnSubmit />
+            <ConciergeComposer />
           </div>
         </div>
-      </main>
+      </div>
 
       {/* ── Standing band ──────────────────────────────────────────────────────
           Ruled off and full width. Everything above it is about starting;
@@ -173,9 +173,22 @@ export function ChatStart() {
           </StartBlock>
 
           <StartBlock title="In motion" action={{ label: "All missions", href: routes.missions() }}>
-            {missions.map((mission) => (
-              <MissionRow key={mission.id} mission={mission} />
-            ))}
+            {/* The one block that can legitimately be empty — nothing runs until you
+                start it. A heading over a void reads as a failed fetch, so it says so
+                and points at the page that fixes it. */}
+            {missions.length === 0 ? (
+              <li className="py-2 text-[13px] text-content-subtle">
+                Nothing running yet.{" "}
+                <Link
+                  href={routes.missions()}
+                  className="rounded-sm font-medium text-gold transition-colors duration-200 hover:text-gold-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  Start a mission
+                </Link>
+              </li>
+            ) : (
+              missions.map((mission) => <MissionRow key={mission.id} mission={mission} />)
+            )}
           </StartBlock>
 
           {/* Full width on the two-column step rather than stranded at half: a
@@ -202,30 +215,6 @@ export function ChatStart() {
         className="paper-grain pointer-events-none absolute inset-0 opacity-[0.09] dark:opacity-[0.075]"
       />
     </div>
-  );
-}
-
-/**
- * Close.
- *
- * A bordered surface chip in theme tokens. It carried a second, white-on-black
- * variant while there was a plate for it to sit on; with the page down to one
- * ground there is one material, and the branch went with the plate.
- */
-function CloseButton() {
-  return (
-    <Link
-      href={routes.home()}
-      aria-label="Close"
-      className={cn(
-        "grid size-9 shrink-0 place-items-center rounded-full border border-border bg-surface/70 backdrop-blur-xl",
-        "text-content-subtle transition-[background-color,border-color,color] duration-200",
-        "hover:border-border-strong hover:bg-surface hover:text-content",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-      )}
-    >
-      <X className="size-4" aria-hidden="true" />
-    </Link>
   );
 }
 

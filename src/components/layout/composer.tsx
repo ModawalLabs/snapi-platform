@@ -4,6 +4,13 @@ import { X } from "lucide-react";
 import * as React from "react";
 
 import {
+  AttachmentInput,
+  AttachmentThumb,
+  ComposerActions,
+  useAttachment,
+} from "@/components/layout/composer-attachment";
+import { SendButton } from "@/components/layout/composer-send";
+import {
   autoGrow,
   BETWEEN_MS,
   BLOOM,
@@ -13,7 +20,6 @@ import {
   HOLD_MS,
   PANEL,
   PILL,
-  SEND_BUTTON,
   TYPE_MS,
 } from "@/components/layout/composer-styles";
 import { cn } from "@/lib/utils";
@@ -107,10 +113,17 @@ export function Composer({
   const [typedLength, setTypedLength] = React.useState(0);
   const [phase, setPhase] = React.useState<"typing" | "deleting">("typing");
 
+  const { attachment, inputRef: fileRef, open, onChange, clear } = useAttachment();
+
   // The decorative line shows only while the field is untouched — exactly the
-  // hero's swap, which stops the demo text competing with real input.
-  const showDemo = !focused && value.length === 0;
-  const canSend = value.trim().length > 0;
+  // hero's swap, which stops the demo text competing with real input. An attachment
+  // counts as touched: a rotating demo prompt above a picked photograph reads as
+  // the assistant describing that photograph, which it is not.
+  const showDemo = !focused && value.length === 0 && !attachment;
+
+  // A picture on its own is a legitimate message — "find me this" is the whole
+  // premise of visual search — so the send button lights for one.
+  const canSend = value.trim().length > 0 || attachment !== null;
 
   React.useEffect(() => {
     if (!showDemo) return;
@@ -226,7 +239,7 @@ export function Composer({
         BLOOM,
         BLOOM_HOVER,
         BLOOM_FOCUS,
-        "transition-[box-shadow,transform] duration-300 ease-[cubic-bezier(0.21,0.47,0.32,0.98)]",
+        "transition-[box-shadow,scale] duration-300 ease-[cubic-bezier(0.21,0.47,0.32,0.98)]",
         "focus-within:scale-[1.04] hover:scale-[1.015]",
       )}
     >
@@ -239,6 +252,8 @@ export function Composer({
         className="absolute top-1/2 left-1/2 -mt-[110%] -ml-[110%] h-[220%] w-[220%] animate-ring-sweep-burst motion-reduce:animate-none"
         style={{ background: "var(--ring-sweep-gradient)" }}
       />
+
+      <AttachmentInput inputRef={fileRef} onChange={onChange} />
 
       {/* 28px between the prompt row and the pills, not the hero's 40. That gap
           is proportional to a card that is nearly square; on a 576px-wide dock
@@ -297,6 +312,14 @@ export function Composer({
             </span>
           </div>
 
+          {/* Above the field, not beside it. A thumbnail in the row would shrink
+              the measure of the very sentence it is a reference for. */}
+          {attachment ? (
+            <div className="mb-3">
+              <AttachmentThumb attachment={attachment} onRemove={clear} size="sm" />
+            </div>
+          ) : null}
+
           <div className="relative w-full">
             {showDemo ? (
               <p
@@ -351,7 +374,7 @@ export function Composer({
         </div>
 
         <div className="flex w-full items-center justify-between gap-2">
-          <div className="flex min-w-0 flex-1 flex-wrap gap-[5px]">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-[5px]">
             {CATEGORIES.map((label) => (
               <button
                 key={label}
@@ -364,35 +387,24 @@ export function Composer({
             ))}
           </div>
 
-          {/* Kept mounted and faded rather than conditionally rendered — mounting
-              it on the first keystroke would shift the pill row sideways. */}
-          <button
-            type="submit"
-            aria-label="Send"
-            disabled={!canSend}
-            tabIndex={canSend ? 0 : -1}
-            onClick={(event) => event.stopPropagation()}
-            className={cn(
-              SEND_BUTTON,
-              "size-[34px]",
-              canSend ? "scale-100 opacity-100" : "pointer-events-none scale-90 opacity-0",
-            )}
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="oklch(20% 0.02 70)"
-              strokeWidth="2.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          {/* ── The right-hand cluster ────────────────────────────────────────
+              Attach, dictate, send — the three controls that act on the message,
+              gathered at the end of the row where the message ends. The pills stay
+              left because they describe the *search*, not the sentence.
+
+              A hairline before Send rather than after the pills: the grouping that
+              matters here is "these two prepare it, this one commits it", and the
+              rule is what stops the gold circle reading as a third icon button. */}
+          <span className="flex shrink-0 items-center gap-1.5">
+            <ComposerActions onAttach={open} hasAttachment={attachment !== null} size="sm" />
+
+            <span
               aria-hidden="true"
-            >
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <polyline points="12 5 19 12 12 19" />
-            </svg>
-          </button>
+              className="mx-0.5 h-4 w-px bg-[oklch(0%_0_0/0.1)] dark:bg-white/12"
+            />
+
+            <SendButton canSend={canSend} size={34} glyph={16} />
+          </span>
         </div>
       </div>
     </form>

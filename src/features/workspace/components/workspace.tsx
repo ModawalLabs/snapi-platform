@@ -1,11 +1,14 @@
 "use client";
 
-import { ChevronDown, MessageSquare, X } from "lucide-react";
+import { ChevronDown, MessageSquare, Scale, X } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
 import { Logo } from "@/components/layout/logo";
 import { ProductCard } from "@/features/workspace/components/product-card";
+import { ProductComparison } from "@/features/workspace/components/product-comparison";
+import { ProductDetail } from "@/features/workspace/components/product-detail";
+import { MAX_COMPARE } from "@/features/workspace/lib/compare";
 import { WorkspaceComposer } from "@/features/workspace/components/workspace-composer";
 import { WorkspaceThread } from "@/features/workspace/components/workspace-thread";
 import type { MockMessage, MockProduct } from "@/lib/mock-data";
@@ -46,12 +49,25 @@ export function Workspace({
   title,
   closeHref,
   closeLabel,
+  selfHref,
+  productSlug,
   messages,
   products,
   resultsNote,
 }: {
   eyebrow: string;
   title: string;
+  /** This workspace's own URL, without `?p=`. See `WorkspaceSeed.selfHref`. */
+  selfHref: string;
+  /**
+   * The product to show in the pane, from `?p=` on the URL.
+   *
+   * A slug rather than a product, so the page that reads the query string does not
+   * also have to resolve it — and so an unknown slug degrades to the grid instead of
+   * to an error. Someone editing the URL by hand, or following a link to a product
+   * that has since left the results, gets the results back rather than a dead end.
+   */
+  productSlug?: string;
   /**
    * Where the close button goes. An explicit href rather than `router.back()`:
    * back does nothing useful when the URL was opened directly, shared, or
@@ -66,6 +82,97 @@ export function Workspace({
   resultsNote?: string;
 }) {
   const [sheetOpen, setSheetOpen] = React.useState(false);
+
+  /**
+   * Comparison, as three states rather than two booleans.
+   *
+   * `browse | select | compare` cannot represent "comparing but also still
+   * selecting", which a pair of flags can and which would be a bug nobody notices
+   * until the grid renders behind the verdict.
+   */
+  const [mode, setMode] = React.useState<"browse" | "select" | "compare">("browse");
+  const [picked, setPicked] = React.useState<string[]>([]);
+
+  const selecting = mode === "select";
+
+  /**
+   * Toggle a pick, capped at `MAX_COMPARE`.
+   *
+   * Past the cap the tap is refused rather than replacing the oldest pick. At two the
+   * replacement was the better call — "this one too" answered by silence looks broken.
+   * At five it is the worse one: the tick that would disappear is somewhere else in a
+   * grid you are not looking at, so the set changes behind your back while the count
+   * stays put. Refusing is only defensible because the interface says so out loud —
+   * the header reads "5 of 5 · full" and the unpicked cards go quiet. Neither half
+   * works without the other.
+   */
+  const togglePick = React.useCallback((id: string) => {
+    setPicked((current) => {
+      if (current.includes(id)) return current.filter((pickedId) => pickedId !== id);
+      if (current.length >= MAX_COMPARE) return current;
+      return [...current, id];
+    });
+  }, []);
+
+  /**
+   * Drop one column from the comparison.
+   *
+   * Below two there is nothing left to compare, so the reader goes back to the grid
+   * *still selecting*, with whatever survived ticked. That is the useful place to
+   * land: they removed one because they wanted a different one, so the next tap
+   * continues the job rather than starting it over.
+   */
+  const removeFromComparison = React.useCallback(
+    (id: string) => {
+      // Both setters called from the handler, not one from inside the other's updater.
+      // An updater must be a pure function of its argument: React is free to run it
+      // twice (it does, in development), and a `setMode` in there is a side effect that
+      // runs twice with it. Reading `picked` from the closure is safe here because a
+      // removal is a click, and a click always sees the rendered set.
+      const next = picked.filter((pickedId) => pickedId !== id);
+      setPicked(next);
+      if (next.length < 2) setMode("select");
+    },
+    [picked],
+  );
+
+  /**
+   * The opened product, and the href that opens one.
+   *
+   * `selfHref` may already carry a query (`/chat?q=…`) or not (`/chat/abc`), so the
+   * separator has to be decided rather than assumed — appending `?p=` to a URL that
+   * already has a `?` produces a second query string that no router will parse.
+   */
+  const productHref = React.useCallback(
+    (slug: string) =>
+      `${selfHref}${selfHref.includes("?") ? "&" : "?"}p=${encodeURIComponent(slug)}`,
+    [selfHref],
+  );
+
+  const opened = React.useMemo(
+    () => (productSlug ? (products.find((item) => item.slug === productSlug) ?? null) : null),
+    [productSlug, products],
+  );
+
+  /**
+   * The chosen set, resolved back to products and ordered as the grid shows them.
+   *
+   * Ordered by the grid rather than by pick order, so the leftmost column is the card
+   * that was leftmost. Picking right-then-left and having the columns swap is
+   * disorienting in a way that is hard to name and easy to feel.
+   *
+   * `null` unless there are genuinely at least two, which is what lets the render
+   * below treat "compare" and "have something to compare" as one condition instead of
+   * trusting the mode.
+   */
+  const compared = React.useMemo((): MockProduct[] | null => {
+    if (mode !== "compare") return null;
+    const set = products.filter((product) => picked.includes(product.id));
+    return set.length >= 2 ? set : null;
+  }, [mode, picked, products]);
+
+  /** The set is full: every remaining card is unpickable until something is dropped. */
+  const atCapacity = picked.length >= MAX_COMPARE;
 
   // Escape closes the sheet. Bound to the window rather than the panel because the
   // user may well be scrolling the products behind it when they want it gone.
@@ -171,41 +278,185 @@ export function Workspace({
 
         {/* ── Products ─────────────────────────────────────────────────────── */}
         <section aria-label="Results" className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          <div
-            className={cn(
-              "px-4 pt-6 sm:px-6 sm:pt-8 lg:px-8",
-              // Clears the docked composer on mobile. On desktop the chat is a
-              // sibling column, so no allowance is needed.
-              "pb-56 lg:pb-10",
-            )}
-          >
-            <div className="flex items-baseline justify-between gap-4 pb-5">
-              <h2 className="text-eyebrow text-content-subtle">
-                {products.length} {products.length === 1 ? "piece" : "pieces"} found
-              </h2>
-              {/* Omitted entirely rather than rendered empty — an empty `<p>` here
-                  would still hold its line box and push the rule down. */}
-              {resultsNote ? (
-                <p className="min-w-0 truncate text-[12px] text-content-subtle">{resultsNote}</p>
-              ) : null}
+          {/* The comparison replaces the grid rather than opening over it. A modal
+              would put a decision about two products on top of the twelve you were
+              choosing between, and the pane is the natural place for it — the
+              conversation stays beside it, which is the whole point of the split. */}
+          {/* A product wins over a comparison: `?p=` is in the URL, and the URL is
+              the more authoritative statement of what the reader asked to see than a
+              flag left over from a click. */}
+          {opened ? (
+            <div className={cn("px-4 pt-6 sm:px-6 sm:pt-8 lg:px-8", "pb-56 lg:pb-10")}>
+              {/* Keyed on the product, so opening a different one remounts rather
+                  than reusing — see the note on its state.
+
+                  `related` is the rest of these results, not this vendor's inventory.
+                  The heading says otherwise and the mismatch is a known placeholder —
+                  see the prop's own note. */}
+              <ProductDetail
+                key={opened.id}
+                product={opened}
+                backHref={selfHref}
+                related={products.filter((item) => item.id !== opened.id).slice(0, 5)}
+                relatedHref={productHref}
+              />
             </div>
+          ) : compared ? (
+            <div className={cn("px-4 pt-6 sm:px-6 sm:pt-8 lg:px-8", "pb-56 lg:pb-10")}>
+              <ProductComparison
+                products={compared}
+                onBack={() => {
+                  setPicked([]);
+                  setMode("browse");
+                }}
+                // Keeps every pick, so changing one is a tap rather than starting
+                // the selection over.
+                onChangeSelection={() => setMode("select")}
+                onRemove={removeFromComparison}
+              />
+            </div>
+          ) : (
+            <>
+              {/* Pinned to the top of the pane rather than scrolling away with the
+                  first row. Compare was easy to miss partly because it was styled
+                  quietly and partly because it left the screen the moment you looked
+                  at the results — a tool you only want *after* reading the grid
+                  should still be there once you have.
 
-            <div className="rule-fade mb-6 h-px" aria-hidden="true" />
+                  A direct child of the scroll container, not of the padded wrapper:
+                  inside the padding, the bar's background would stop short of the
+                  gutters and cards would scroll visibly past its edges. */}
+              <div
+                className={cn(
+                  "sticky top-0 z-10 px-4 pt-6 sm:px-6 sm:pt-8 lg:px-8",
+                  "bg-canvas/90 backdrop-blur-md",
+                )}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 pb-4">
+                  <h2 className="text-eyebrow text-content-subtle">
+                    {selecting
+                      ? // The count is the instruction. A bare "Select some" leaves the
+                        // reader counting ticks across a grid to work out where they
+                        // are — and at the ceiling it is the only thing explaining why
+                        // the next tap did nothing.
+                        `Select up to ${MAX_COMPARE} to compare · ${picked.length} of ${MAX_COMPARE}${atCapacity ? " · full" : ""}`
+                      : `${products.length} ${products.length === 1 ? "piece" : "pieces"} found`}
+                  </h2>
 
-            {products.length === 0 ? (
-              <p className="py-20 text-center text-sm text-content-muted">
-                Nothing matched yet. Snapi is still looking.
-              </p>
-            ) : (
-              <ul className="grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-3 2xl:grid-cols-4">
-                {products.map((product) => (
-                  <li key={product.id}>
-                    <ProductCard product={product} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+                  {selecting ? (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPicked([]);
+                          setMode("browse");
+                        }}
+                        className={cn(
+                          "rounded-md px-2 py-1.5 text-[13px] font-medium text-content-subtle",
+                          "transition-colors duration-200 hover:text-content",
+                          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                        )}
+                      >
+                        Cancel
+                      </button>
+
+                      {/* Genuinely disabled below two, not merely dimmed — there is
+                          nothing to compare one product against, and letting the
+                          click through would land on a half-built view. */}
+                      <button
+                        type="button"
+                        disabled={picked.length < 2}
+                        onClick={() => setMode("compare")}
+                        className={cn(
+                          "rounded-md bg-gold-solid px-3.5 py-1.5 text-[13px] font-semibold text-gold-content",
+                          "transition-[background-color,opacity] duration-200",
+                          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                          picked.length >= 2
+                            ? "hover:bg-gold-solid-hover"
+                            : "cursor-not-allowed opacity-40",
+                        )}
+                      >
+                        {picked.length >= 2 ? `Compare these ${picked.length}` : "Compare"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex min-w-0 items-center gap-4">
+                      {/* Omitted entirely rather than rendered empty — an empty `<p>`
+                          here would still hold its line box and push the rule down. */}
+                      {resultsNote ? (
+                        <p className="min-w-0 truncate text-[12px] text-content-subtle">
+                          {resultsNote}
+                        </p>
+                      ) : null}
+
+                      {/* Two is the floor: comparing a product with itself is not a
+                          thing, so the control does not exist until it can work.
+
+                          A solid accent fill, which nothing else in this pane is —
+                          the cards carry no buttons, so it competes with nothing and
+                          becomes the one thing the eye finds. It names the ceiling
+                          rather than saying "Compare": the label has to say what it
+                          will ask of you, or the mode change on click is a surprise —
+                          and the number is what tells you this is a set you build
+                          rather than a single choice. */}
+                      {products.length >= 2 ? (
+                        <button
+                          type="button"
+                          onClick={() => setMode("select")}
+                          className={cn(
+                            "inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2",
+                            "bg-gold-solid text-[13px] font-semibold text-gold-content",
+                            "shadow-[var(--shadow-edge),var(--shadow-premium-sm)]",
+                            "transition-[background-color,box-shadow,transform] duration-200",
+                            "hover:bg-gold-solid-hover active:scale-[0.98]",
+                            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                          )}
+                        >
+                          <Scale className="size-4" aria-hidden="true" />
+                          Compare up to {MAX_COMPARE}
+                        </button>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+
+                <div className="rule-fade h-px" aria-hidden="true" />
+              </div>
+
+              <div
+                className={cn(
+                  "px-4 pt-6 sm:px-6 lg:px-8",
+                  // Clears the docked composer on mobile. On desktop the chat is a
+                  // sibling column, so no allowance is needed.
+                  "pb-56 lg:pb-10",
+                )}
+              >
+                {products.length === 0 ? (
+                  <p className="py-20 text-center text-sm text-content-muted">
+                    Nothing matched yet. Snapi is still looking.
+                  </p>
+                ) : (
+                  <ul className="grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-3 2xl:grid-cols-4">
+                    {products.map((product) => (
+                      <li key={product.id}>
+                        <ProductCard
+                          product={product}
+                          href={productHref(product.slug)}
+                          selectable={selecting}
+                          selected={picked.includes(product.id)}
+                          // Says "the set is full" on the cards themselves, which is
+                          // where the refused tap happens. The header's count explains
+                          // it; this is what makes it visible before you try.
+                          atCapacity={atCapacity && !picked.includes(product.id)}
+                          onToggle={() => togglePick(product.id)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </>
+          )}
         </section>
       </div>
     </div>

@@ -47,7 +47,7 @@ export function DispatchList({ stories }: { stories: MockEditStory[] }) {
               <h3 className="mt-2 flex items-start gap-2 text-lg leading-snug font-semibold text-balance text-content transition-colors duration-300 group-hover:text-gold">
                 {story.title}
                 <ArrowRight
-                  className="mt-1.5 size-4 shrink-0 opacity-0 transition-[opacity,transform] duration-300 group-hover:translate-x-0.5 group-hover:opacity-100"
+                  className="mt-1.5 size-4 shrink-0 opacity-0 transition-[opacity,translate] duration-300 group-hover:translate-x-0.5 group-hover:opacity-100"
                   aria-hidden="true"
                 />
               </h3>

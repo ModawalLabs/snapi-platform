@@ -118,7 +118,7 @@ export function ChatHistory({ page }: { page: number }) {
                           </span>
 
                           <ArrowUpRight
-                            className="size-4 shrink-0 text-content-subtle opacity-0 transition-[opacity,transform] duration-300 group-hover:translate-x-0.5 group-hover:text-gold group-hover:opacity-100"
+                            className="size-4 shrink-0 text-content-subtle opacity-0 transition-[opacity,translate] duration-300 group-hover:translate-x-0.5 group-hover:text-gold group-hover:opacity-100"
                             aria-hidden="true"
                           />
                         </Link>

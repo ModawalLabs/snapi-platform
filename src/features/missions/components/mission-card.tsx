@@ -13,6 +13,33 @@ import { cn } from "@/lib/utils";
 const NAME_MAX = 60;
 
 /**
+ * How the rename and delete controls appear — and every way they come back.
+ *
+ * Hidden at rest so a board of missions is a wall of photographs rather than a wall
+ * of photographs with two buttons stamped on each. That is a real gain on a grid whose
+ * whole job is recognition.
+ *
+ * The cost is that a hover-only control does not exist where there is no hover, so it
+ * is bought back three ways — the same three the saved-list tile uses:
+ *
+ *  - `group-hover` — the intended reveal, on a pointer.
+ *  - `group-focus-within` — a keyboard user tabbing the grid can see what they have
+ *    landed on. Without it the buttons are reachable and invisible, which is worse
+ *    than either state alone.
+ *  - `(hover: none)` — permanently visible on touch. This is the one that keeps
+ *    rename and delete from silently disappearing on a phone.
+ *
+ * Opacity only, no `pointer-events` guard: reaching these with a pointer means
+ * hovering the card, which has already revealed them, so there is no invisible target
+ * to hit by accident.
+ */
+const REVEAL_CONTROLS = cn(
+  "opacity-0 transition-opacity duration-300",
+  "group-focus-within:opacity-100 group-hover:opacity-100",
+  "[@media(hover:none)]:opacity-100",
+);
+
+/**
  * One mission, as a portrait photo card.
  *
  * The photograph is the card, not an illustration inside it. On a grid the job is
@@ -92,22 +119,37 @@ export function MissionCard({
         sizes="(min-width: 1280px) 23vw, (min-width: 1024px) 31vw, (min-width: 640px) 47vw, 92vw"
         className={cn(
           "aspect-[3/4] min-h-[19rem] rounded-xl",
-          "transition-[transform,box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+          "transition-[translate,box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
           "group-hover:-translate-y-0.5 group-hover:shadow-premium",
         )}
       >
         {/* The scrim is bottom-weighted, so the top of the frame is bare. This
             reinstates just enough shade for the controls without lifting the
-            photograph's midtones. */}
+            photograph's midtones — and it fades in with them, because a dark band
+            across the top of a photograph with nothing sitting on it is just a
+            photograph with a dark band across the top. */}
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/45 to-transparent"
+          className={cn(
+            "pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/45 to-transparent",
+            editing ? "opacity-100" : REVEAL_CONTROLS,
+          )}
           aria-hidden="true"
         />
 
         <div className="on-photo absolute inset-0 flex flex-col p-4 sm:p-5">
-          {/* Always rendered, never hover-revealed: a hover-only control does not
-              exist on a touch screen. */}
-          <header className="flex shrink-0 items-center justify-end gap-1.5">
+          {/* Revealed on hover — see `REVEAL_CONTROLS`.
+
+              Pinned visible while renaming, and that exception is the important one:
+              the pointer leaves the card the moment you reach for the keyboard, and a
+              Save button that vanishes mid-rename would look like the edit had been
+              cancelled. `group-focus-within` covers the field itself, but not the
+              moment focus sits in the input and the mouse is elsewhere. */}
+          <header
+            className={cn(
+              "flex shrink-0 items-center justify-end gap-1.5",
+              editing ? "opacity-100" : REVEAL_CONTROLS,
+            )}
+          >
             {editing ? (
               <IconButton label="Save name" onClick={commit} icon={Check} tone="confirm" />
             ) : (

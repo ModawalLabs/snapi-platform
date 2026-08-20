@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { clamp, cn, formatCompact, formatPrice, slugify } from "@/lib/utils";
+import { clamp, cn, formatCompact, formatPrice } from "@/lib/utils";
 
 describe("cn", () => {
   it("resolves conflicting Tailwind utilities in favour of the last one", () => {
@@ -35,16 +35,6 @@ describe("formatPrice", () => {
 describe("formatCompact", () => {
   it("abbreviates large counts", () => {
     expect(formatCompact(1200)).toBe("1.2K");
-  });
-});
-
-describe("slugify", () => {
-  it("produces a URL-safe slug", () => {
-    expect(slugify("Nike Air Max 90 — Men's")).toBe("nike-air-max-90-men-s");
-  });
-
-  it("strips diacritics", () => {
-    expect(slugify("Café Crème")).toBe("cafe-creme");
   });
 });
 

@@ -18,11 +18,21 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 }
 
 /** `/edit/:slug` — an editorial story, opened as a shoppable workspace. */
-export default async function EditStoryWorkspacePage({ params }: { params: Params }) {
+export default async function EditStoryWorkspacePage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  /** `?p=<slug>` opens that product in the results pane. */
+  searchParams: Promise<{ p?: string }>;
+}) {
   const { slug } = await params;
   const story = find(slug);
 
   if (!story) notFound();
 
-  return <Workspace {...storySeed(story)} />;
+  // Trimmed, so `?p=` and `?p=%20` both mean "no product".
+  const productSlug = (await searchParams).p?.trim() || undefined;
+
+  return <Workspace {...storySeed(story)} productSlug={productSlug} />;
 }

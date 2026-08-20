@@ -4,6 +4,13 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 
 import {
+  AttachmentInput,
+  AttachmentThumb,
+  ComposerActions,
+  useAttachment,
+} from "@/components/layout/composer-attachment";
+import { SendButton } from "@/components/layout/composer-send";
+import {
   autoGrow,
   BETWEEN_MS,
   BLOOM,
@@ -13,7 +20,6 @@ import {
   HOLD_MS,
   PANEL,
   PILL,
-  SEND_BUTTON,
   TYPE_MS,
 } from "@/components/layout/composer-styles";
 import { routes } from "@/config/routes";
@@ -54,9 +60,36 @@ const PROMPTS = [
 
 const CATEGORIES = ["Clothing", "Shoes", "Bags", "Jewellery", "Watches"] as const;
 
+/**
+ * How many category pills the split view shows.
+ *
+ * Three, against the Concierge's five, and the difference is the width each surface
+ * has. On the Concierge this composer is the page — a centred card with nothing beside
+ * it — so five pills sit comfortably on one line under the field. In the split view it
+ * is docked to the foot of a conversation column beside the results, and five pills
+ * wrap onto a second row that pushes the thread up every time the composer grows.
+ *
+ * A slice rather than a second list, so the labels cannot drift apart: the split view
+ * shows the first three of the same set the Concierge shows all of.
+ */
+const SPLIT_VIEW_PILLS = 3;
+
 const HEADING_ID = "workspace-composer-heading";
 
-export function WorkspaceComposer({ navigateOnSubmit = false }: { navigateOnSubmit?: boolean }) {
+export function WorkspaceComposer({
+  navigateOnSubmit = false,
+  focusToken = 0,
+}: {
+  navigateOnSubmit?: boolean;
+  /**
+   * Increment to move the cursor here. See `ComposerProvider.focusToken` — the
+   * sidebar's Ask Snapi button uses it on the one page that has no dock to open.
+   *
+   * A number rather than a callback so this stays a plain prop a Server Component
+   * can pass through a thin client wrapper.
+   */
+  focusToken?: number;
+}) {
   const router = useRouter();
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
   const [value, setValue] = React.useState("");
@@ -65,10 +98,24 @@ export function WorkspaceComposer({ navigateOnSubmit = false }: { navigateOnSubm
   const [typedLength, setTypedLength] = React.useState(0);
   const [phase, setPhase] = React.useState<"typing" | "deleting">("typing");
 
+  const { attachment, inputRef: fileRef, open, onChange, clear } = useAttachment();
+
   // The decorative line shows only while the field is untouched — the hero's exact
-  // swap, which stops the demo text competing with real input.
-  const showDemo = !focused && value.length === 0;
-  const canSend = value.trim().length > 0;
+  // swap, which stops the demo text competing with real input. An attachment counts
+  // as touched, for the reason given on the docked composer.
+  const showDemo = !focused && value.length === 0 && !attachment;
+
+  /**
+   * A picture alone is a legitimate message — except on the one composer that
+   * navigates. `?q=` can carry a sentence and cannot carry a file, so the start
+   * page needs words as well as a reference; lighting the button for an image it
+   * cannot take anywhere would be a promise the URL cannot keep.
+   */
+  const canSend = value.trim().length > 0 || (attachment !== null && !navigateOnSubmit);
+
+  // `navigateOnSubmit` is what tells the two surfaces apart: it is true only on the
+  // Concierge, where this composer has the page to itself. See `SPLIT_VIEW_PILLS`.
+  const pills = navigateOnSubmit ? CATEGORIES : CATEGORIES.slice(0, SPLIT_VIEW_PILLS);
 
   React.useEffect(() => {
     if (!showDemo) return;
@@ -93,6 +140,22 @@ export function WorkspaceComposer({ navigateOnSubmit = false }: { navigateOnSubm
 
     return () => clearTimeout(timer);
   }, [showDemo, phase, typedLength, promptIndex]);
+
+  /**
+   * Focus on request, but never on mount.
+   *
+   * The guard is the whole point: `focusToken` starts at 0 and this effect runs
+   * once on mount regardless, so without it every page carrying this composer would
+   * steal the cursor before the reader had looked at anything — and on the Concierge
+   * that would also scroll the briefing out of view to reach the field.
+   */
+  const seenToken = React.useRef(focusToken);
+
+  React.useEffect(() => {
+    if (focusToken === seenToken.current) return;
+    seenToken.current = focusToken;
+    inputRef.current?.focus();
+  }, [focusToken]);
 
   /**
    * Enter sends, Shift+Enter inserts a line break.
@@ -141,6 +204,8 @@ export function WorkspaceComposer({ navigateOnSubmit = false }: { navigateOnSubm
         style={{ background: "var(--ring-sweep-gradient)" }}
       />
 
+      <AttachmentInput inputRef={fileRef} onChange={onChange} />
+
       <div className={cn("relative flex w-full flex-col gap-7 rounded-[18.5px] p-4", PANEL)}>
         <div className="w-full">
           <p
@@ -149,6 +214,14 @@ export function WorkspaceComposer({ navigateOnSubmit = false }: { navigateOnSubm
           >
             Your personal shopper
           </p>
+
+          {/* Above the field, not beside it. A thumbnail in the row would shrink
+              the measure of the very sentence it is a reference for. */}
+          {attachment ? (
+            <div className="mb-3">
+              <AttachmentThumb attachment={attachment} onRemove={clear} />
+            </div>
+          ) : null}
 
           <div className="relative w-full">
             {showDemo ? (
@@ -197,8 +270,8 @@ export function WorkspaceComposer({ navigateOnSubmit = false }: { navigateOnSubm
         </div>
 
         <div className="flex w-full items-end justify-between gap-2">
-          <div className="flex min-w-0 flex-1 flex-wrap gap-[5px]">
-            {CATEGORIES.map((label) => (
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-[5px]">
+            {pills.map((label) => (
               <button
                 key={label}
                 type="button"
@@ -210,35 +283,20 @@ export function WorkspaceComposer({ navigateOnSubmit = false }: { navigateOnSubm
             ))}
           </div>
 
-          {/* Kept mounted and faded rather than conditionally rendered — mounting
-              it on the first keystroke would shift the pill row sideways. */}
-          <button
-            type="submit"
-            aria-label="Send"
-            disabled={!canSend}
-            tabIndex={canSend ? 0 : -1}
-            onClick={(event) => event.stopPropagation()}
-            className={cn(
-              SEND_BUTTON,
-              "size-[38px]",
-              canSend ? "scale-100 opacity-100" : "pointer-events-none scale-90 opacity-0",
-            )}
-          >
-            <svg
-              width="17"
-              height="17"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="oklch(20% 0.02 70)"
-              strokeWidth="2.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          {/* Attach, dictate, send — gathered at the end of the row, where the
+              message ends. The pills stay left because they describe the search
+              rather than the sentence. See the docked composer, which is this row
+              four pixels smaller. */}
+          <span className="flex shrink-0 items-center gap-1.5">
+            <ComposerActions onAttach={open} hasAttachment={attachment !== null} />
+
+            <span
               aria-hidden="true"
-            >
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <polyline points="12 5 19 12 12 19" />
-            </svg>
-          </button>
+              className="mx-0.5 h-4 w-px bg-[oklch(0%_0_0/0.1)] dark:bg-white/12"
+            />
+
+            <SendButton canSend={canSend} size={38} glyph={17} />
+          </span>
         </div>
       </div>
     </form>

@@ -1,9 +1,11 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import type * as React from "react";
 
 import { Composer } from "@/components/layout/composer";
 import { useComposer } from "@/components/layout/composer-provider";
+import { dockBelongsOn } from "@/components/layout/dock-scope";
 import { useSidebar } from "@/components/layout/sidebar-provider";
 import { cn } from "@/lib/utils";
 
@@ -45,6 +47,12 @@ import { cn } from "@/lib/utils";
 export function FloatingComposer() {
   const { collapsed } = useSidebar();
   const { open, openComposer, closeComposer } = useComposer();
+  const pathname = usePathname();
+
+  // The Concierge renders its own composer — see `dockBelongsOn`. Returning null
+  // rather than hiding it, because the `/` shortcut lives inside `Composer`: hidden
+  // but mounted, both would answer the same keypress.
+  if (!dockBelongsOn(pathname)) return null;
 
   return (
     <div
@@ -68,7 +76,7 @@ export function FloatingComposer() {
         // Under the mobile drawer and its scrim, both of which are z-50. A
         // composer floating over an open navigation drawer would be absurd.
         "md:left-[var(--composer-inset)]",
-        "transition-[left,opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+        "transition-[left,opacity,translate] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
         // Leaves downward rather than merely fading: the card belongs to the
         // bottom edge, so that is the direction it should look like it went.
         open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0",

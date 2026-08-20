@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
-import { ChatStart, promptSeed, Workspace } from "@/features/workspace";
+import { routes } from "@/config/routes";
+import { promptSeed, Workspace } from "@/features/workspace";
 
 export const metadata: Metadata = {
   title: "Ask Snapi",
@@ -8,32 +10,34 @@ export const metadata: Metadata = {
 };
 
 /**
- * `/chat` — the assistant, in its two states.
+ * `/chat?q=…` — a search, full screen.
  *
- * Without `?q=` it is the start page: a greeting, the concierge's brief, the
- * composer, and what is already in motion. With a query it is the answered
- * surface — the 30/70 thread and results.
+ * The answered half of the assistant: the 30/70 thread and results, outside the
+ * `(app)` group so the sidebar is genuinely absent rather than covered.
  *
- * One route rather than two, because these are the same thing before and after a
- * question. It also means a shared `/chat` link lands somewhere sensible instead
- * of on a conversation the recipient never had: previously an empty query seeded a
- * whole fake exchange out of nothing, which was the weaker half of this route's
- * behaviour.
+ * Nothing asked means nothing to show, so a bare `/chat` redirects to the
+ * Concierge, which is the page that exists for that state. It used to render a
+ * start page here instead, but the two want opposite chrome — one sits beside the
+ * sidebar, the other takes the window — and a layout is fixed per segment.
+ *
+ * A redirect rather than rendering the Concierge inline: the URL should end up
+ * being the one that matches what you are looking at, or the back button and a
+ * shared link both lie.
  *
  * `searchParams` is a Promise in Next 15+; awaiting it opts this route into
  * dynamic rendering, which a per-request query param requires anyway.
  */
-export default async function NewChatWorkspacePage({
+export default async function ChatWorkspacePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; p?: string }>;
 }) {
-  const { q } = await searchParams;
-  const prompt = q?.trim() ?? "";
+  const { q, p } = await searchParams;
 
   // `trim`, not just a presence check: `?q=` and `?q=%20` both arrive as strings
   // and both mean "nothing was asked".
-  if (prompt.length === 0) return <ChatStart />;
+  const prompt = q?.trim() ?? "";
+  if (prompt.length === 0) redirect(routes.concierge());
 
-  return <Workspace {...promptSeed(prompt)} />;
+  return <Workspace {...promptSeed(prompt)} productSlug={p?.trim() || undefined} />;
 }

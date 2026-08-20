@@ -25,7 +25,7 @@ export function BrandPlate({ brand }: { brand: MockBrand }) {
       href={routes.brand(brand.slug)}
       className={cn(
         "group flex h-full flex-col items-center justify-center gap-4 rounded-lg border border-border bg-surface/50 px-3 py-7",
-        "transition-[background-color,border-color,box-shadow,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+        "transition-[background-color,border-color,box-shadow,translate] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
         "hover:-translate-y-0.5 hover:border-gold-border hover:bg-surface hover:shadow-premium-sm",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
       )}

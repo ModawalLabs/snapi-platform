@@ -27,7 +27,14 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
  * The list at `/missions` comes from `(app)/missions/page.tsx`; route groups do not
  * appear in the URL, so the two coexist as `/missions` and `/missions/:id`.
  */
-export default async function MissionWorkspacePage({ params }: { params: Params }) {
+export default async function MissionWorkspacePage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  /** `?p=<slug>` opens that product in the results pane. */
+  searchParams: Promise<{ p?: string }>;
+}) {
   const { id } = await params;
   const mission = find(id);
 
@@ -36,5 +43,8 @@ export default async function MissionWorkspacePage({ params }: { params: Params 
   // workspace that looks like the agent found nothing.
   if (!mission) notFound();
 
-  return <Workspace {...missionSeed(mission)} />;
+  // Trimmed, so `?p=` and `?p=%20` both mean "no product".
+  const productSlug = (await searchParams).p?.trim() || undefined;
+
+  return <Workspace {...missionSeed(mission)} productSlug={productSlug} />;
 }

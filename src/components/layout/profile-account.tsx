@@ -259,7 +259,7 @@ function ProfileDialog({
                   onClick={() => setFlavour(card.id)}
                   className={cn(
                     "flex h-full flex-col rounded-xl border p-4 text-left",
-                    "transition-[background-color,border-color,box-shadow,transform] duration-300",
+                    "transition-[background-color,border-color,box-shadow,translate] duration-300",
                     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                     active ? card.selected : cn(card.idle, "hover:-translate-y-0.5"),
                   )}

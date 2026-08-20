@@ -28,6 +28,18 @@ export interface WorkspaceSeed {
   title: string;
   closeHref: string;
   closeLabel: string;
+  /**
+   * This workspace's own URL, without a product on it.
+   *
+   * Product cards append `&p=<slug>` to it, which is what makes an opened product
+   * a real location: shareable, refreshable, and dismissed by the browser's own back
+   * button rather than by a control the page has to provide.
+   *
+   * Each seed carries its own because every entry point has a different URL, and
+   * the pane cannot read the address bar without `useSearchParams`, which would put
+   * the whole workspace behind a Suspense boundary.
+   */
+  selfHref: string;
   messages: MockMessage[];
   products: MockProduct[];
   /** Optional — omitted where the heading already says everything it would. */
@@ -60,6 +72,7 @@ export function missionSeed(mission: MockMission): WorkspaceSeed {
     title: mission.name,
     closeHref: routes.missions(),
     closeLabel: "Close mission",
+    selfHref: routes.mission(mission.id),
     resultsNote: "Ranked by how closely each answers the brief",
     messages: [
       { id: "m-1", role: "user", body: mission.brief },
@@ -89,6 +102,7 @@ export function chatSeed(conversation: MockRecent): WorkspaceSeed {
     title: conversation.title,
     closeHref: routes.chats(),
     closeLabel: "Close conversation",
+    selfHref: routes.chat(conversation.id),
     resultsNote: "From this conversation",
     messages: [
       { id: "c-1", role: "user", body: conversation.title },
@@ -113,6 +127,7 @@ export function storySeed(story: MockEditStory): WorkspaceSeed {
     title: story.title,
     closeHref: routes.home(),
     closeLabel: "Close story",
+    selfHref: routes.editStory(story.slug),
     messages: [
       {
         id: "s-1",
@@ -141,6 +156,7 @@ export function brandSeed(brand: MockBrand): WorkspaceSeed {
     title: brand.name,
     closeHref: routes.brands(),
     closeLabel: `Close ${brand.name}`,
+    selfHref: routes.brand(brand.slug),
     resultsNote: own.length > 0 ? `In stock from ${brand.name}` : "Closest to this house",
     messages: [
       { id: "b-1", role: "user", body: `Show me what's available from ${brand.name}.` },
@@ -170,6 +186,7 @@ export function promptSeed(query: string): WorkspaceSeed {
     title: asked.length > 0 ? asked : "Ask Snapi anything",
     closeHref: routes.home(),
     closeLabel: "Close search",
+    selfHref: routes.newChat(asked),
     resultsNote: "Best matches first",
     messages:
       asked.length > 0

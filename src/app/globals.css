@@ -879,11 +879,6 @@ body:has([data-composer-open]) #main {
 
   /* Display type: optical tracking correction. Large text needs negative
    * tracking to look the same weight as body copy. */
-  .display-xl {
-    letter-spacing: -0.035em;
-    line-height: 1.02;
-  }
-
   .display-lg {
     letter-spacing: -0.028em;
     line-height: 1.06;

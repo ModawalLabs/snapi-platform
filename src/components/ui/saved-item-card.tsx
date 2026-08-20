@@ -30,12 +30,24 @@ import { formatDate, formatPrice } from "@/lib/utils";
  * is to store `2190.00` and print it directly; that is how totals end up a cent
  * out and how the first non-USD market breaks.
  */
-export function SavedItemCard({ item, onRemove }: { item: MockSavedItem; onRemove?: () => void }) {
+export function SavedItemCard({
+  item,
+  onRemove,
+  dateLabel = "Saved",
+  subject = "list",
+}: {
+  item: MockSavedItem;
+  onRemove?: () => void;
+  /** Prefixes the date. "Saved" on the list, "Added" in the cart. */
+  dateLabel?: string;
+  /** Names the collection in the remove button's label — "from your cart". */
+  subject?: string;
+}) {
   return (
     <article
       className={[
         "group flex h-full flex-col rounded-lg border border-border bg-surface p-2.5",
-        "transition-[background-color,border-color,box-shadow,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+        "transition-[background-color,border-color,box-shadow,translate] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
         "hover:-translate-y-0.5 hover:border-gold-border hover:shadow-premium-sm",
       ].join(" ")}
     >
@@ -54,22 +66,41 @@ export function SavedItemCard({ item, onRemove }: { item: MockSavedItem; onRemov
 
         {/* On the photograph rather than in a text row: a tile this size has no
             spare line, and the corner of the image is dead space in every product
-            grid ever made.
+            grid ever made. Fixed white-on-black glass rather than theme tokens,
+            because it sits on a photograph and a photograph does not lighten
+            because the UI did.
 
-            Always rendered, not revealed on hover — a hover-only control is simply
-            absent on a touch screen, and "remove" is not a power-user extra. Fixed
-            white-on-black glass rather than theme tokens, because it sits on a
-            photograph and a photograph does not lighten because the UI did. */}
+            ## Revealed on hover, but never only on hover
+
+            Hidden at rest so a page of ten tiles is ten photographs rather than ten
+            photographs and ten delete buttons. That is a real gain — but a
+            hover-only control does not exist on a touch screen, where there is no
+            hover to give, and "remove" is not a power-user extra you can afford to
+            lose. So it comes back three ways:
+
+              - `group-hover` — the intended reveal, on a pointer.
+              - `group-focus-within` and `focus-visible` — a keyboard user tabbing
+                the grid can see what they have landed on. Without these the button
+                is reachable and invisible, which is worse than either.
+              - `(hover: none)` — permanently visible on touch. This is the one that
+                keeps the feature from silently disappearing on a phone.
+
+            Opacity alone, no `pointer-events` guard: reaching it with a pointer
+            means hovering the card, which has already revealed it, so there is no
+            invisible target to click by accident. */}
         {onRemove ? (
           <button
             type="button"
             onClick={onRemove}
-            aria-label={`Remove ${item.name} from your list`}
-            title="Remove from list"
+            aria-label={`Remove ${item.name} from your ${subject}`}
+            title={`Remove from ${subject}`}
             className={[
               "absolute top-1.5 right-1.5 grid size-7 place-items-center rounded-full",
               "border border-white/20 bg-black/40 text-white/90 backdrop-blur-sm",
-              "transition-[background-color,color] duration-200 hover:bg-danger hover:text-white",
+              "opacity-0 transition-[background-color,color,opacity] duration-200",
+              "group-focus-within:opacity-100 group-hover:opacity-100 focus-visible:opacity-100",
+              "[@media(hover:none)]:opacity-100",
+              "hover:bg-danger hover:text-white",
               "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
             ].join(" ")}
           >
@@ -108,7 +139,7 @@ export function SavedItemCard({ item, onRemove }: { item: MockSavedItem; onRemov
             <p className="mt-0.5 truncate text-[10px] text-content-subtle">
               {/* `<time>` with a machine-readable datetime — the visible string is
                   formatted for people, this is what a parser reads. */}
-              Saved <time dateTime={item.savedAt}>{formatDate(item.savedAt)}</time>
+              {dateLabel} <time dateTime={item.savedAt}>{formatDate(item.savedAt)}</time>
             </p>
           </div>
 

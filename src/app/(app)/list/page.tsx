@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import { parsePageParam } from "@/components/ui/pagination";
 import { SnapiList } from "@/features/list";
 
 export const metadata: Metadata = {
@@ -15,19 +14,14 @@ export const metadata: Metadata = {
  * `/list` — inside the `(app)` group, so the sidebar stays mounted and clicking
  * "Snapi List" swaps only the main region.
  *
- * The page number is read here rather than with `useSearchParams()` in the list
- * itself: that hook would force the whole subtree behind a Suspense boundary, and
- * reading it on the server keeps `?page=2` shareable and the back button honest.
+ * Synchronous again. It used to `await searchParams` to read `?page=`; the list now
+ * shows every saved piece on one scroll, so there is no page number to read and
+ * nothing on this page that varies per request.
  *
- * `searchParams` is a Promise in Next 15+ — awaiting it is what opts this route
- * into dynamic rendering, which a per-request query param requires anyway.
+ * Still rendered on demand rather than prerendered, and that is not this file's
+ * doing — the `(app)` layout reads the sidebar's collapsed state from a cookie, which
+ * makes every route in the group dynamic.
  */
-export default async function SnapiListPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ page?: string }>;
-}) {
-  const { page } = await searchParams;
-
-  return <SnapiList page={parsePageParam(page)} />;
+export default function SnapiListPage() {
+  return <SnapiList />;
 }

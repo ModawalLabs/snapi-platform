@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 const buttonVariants = cva(
   cn(
     "inline-flex shrink-0 items-center justify-center gap-2 rounded-md whitespace-nowrap",
-    "font-medium transition-[background-color,color,border-color,box-shadow,transform] duration-150",
+    "font-medium transition-[background-color,color,border-color,box-shadow,scale] duration-150",
     "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
     "disabled:pointer-events-none disabled:opacity-50",
     "active:scale-[0.98]",

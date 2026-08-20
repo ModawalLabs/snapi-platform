@@ -23,11 +23,21 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
  * The register at `/brands` comes from `(app)/brands/page.tsx`; route groups do
  * not appear in the URL, so the two coexist as `/brands` and `/brands/:slug`.
  */
-export default async function BrandWorkspacePage({ params }: { params: Params }) {
+export default async function BrandWorkspacePage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  /** `?p=<slug>` opens that product in the results pane. */
+  searchParams: Promise<{ p?: string }>;
+}) {
   const { slug } = await params;
   const brand = find(slug);
 
   if (!brand) notFound();
 
-  return <Workspace {...brandSeed(brand)} />;
+  // Trimmed, so `?p=` and `?p=%20` both mean "no product".
+  const productSlug = (await searchParams).p?.trim() || undefined;
+
+  return <Workspace {...brandSeed(brand)} productSlug={productSlug} />;
 }
