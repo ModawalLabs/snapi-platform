@@ -1463,11 +1463,46 @@ export interface MockMessage {
  * user's own terms. Without it a result grid is indistinguishable from a search
  * page, and the whole premise is that the match is explainable rather than magic.
  */
+/**
+ * What a piece *is*, for filing rather than for describing.
+ *
+ * A closed set, and the closedness is the point: a mission's collections are these
+ * groups, so a free-text category would produce "Bags", "bags" and "Handbags" as three
+ * separate collections within a week. Seven buckets is also about the resolution a
+ * shopper thinks at — "Outerwear" is a decision, "Wool coats" is a filter.
+ *
+ * Ordered as a wardrobe is built rather than alphabetically, and `MISSION_CATEGORY_ORDER`
+ * relies on that: the collections on a mission read in this order every time, so the
+ * page does not rearrange itself as pieces are added.
+ */
+export type ProductCategory =
+  "Outerwear" | "Tailoring" | "Bags" | "Shoes" | "Jewellery" | "Watches" | "Accessories";
+
+/** Declaration order is display order — see `ProductCategory`. */
+export const PRODUCT_CATEGORIES: readonly ProductCategory[] = [
+  "Outerwear",
+  "Tailoring",
+  "Bags",
+  "Shoes",
+  "Jewellery",
+  "Watches",
+  "Accessories",
+];
+
 export interface MockProduct {
   id: string;
   slug: string;
   brand: string;
   name: string;
+  /**
+   * Which collection this lands in when it is added to a mission.
+   *
+   * Stored, not inferred from the name. A word list ("coat", "loafer", "bag") files
+   * "Cashmere Storm System Coat" correctly and "Kelly 28 Retourné" not at all, and the
+   * failure is silent — the piece just turns up in the wrong collection. A real feed
+   * supplies a category or a taxonomy id; this is that field.
+   */
+  category: ProductCategory;
   price: Money;
   /** Where it is actually buyable. Trust matters more than price on resale. */
   merchant: string;
@@ -1532,6 +1567,7 @@ export interface MockProduct {
 export const mockProducts: MockProduct[] = [
   {
     id: "pr1",
+    category: "Bags",
     description:
       "A Kelly 25 in sellier construction — the stiffer of the two builds, stitched so the bag holds its shape rather than slouching into it. Epsom leather takes a scratch far better than Togo, which is why it is the one most often bought to actually carry. Papers and a dated stamp present.",
     details: [
@@ -1553,6 +1589,7 @@ export const mockProducts: MockProduct[] = [
   },
   {
     id: "pr2",
+    category: "Bags",
     description:
       "The retourné build, stitched inside out so the leather softens with use and the corners round off over a decade rather than staying square. One size up on the 25, which is the difference between a bag that takes a slim laptop and one that does not.",
     details: [
@@ -1574,6 +1611,7 @@ export const mockProducts: MockProduct[] = [
   },
   {
     id: "pr3",
+    category: "Outerwear",
     description:
       "Storm System is a treatment rather than a fabric: a membrane bonded behind the cashmere so it turns rain without the weight or the rustle of a shell. Mid-calf, unlined through the body, and completely unbranded on the outside.",
     details: [
@@ -1595,6 +1633,7 @@ export const mockProducts: MockProduct[] = [
   },
   {
     id: "pr4",
+    category: "Outerwear",
     description:
       "An unstructured shoulder and a straight fall from it — the cut The Row is bought for, and the reason it reads as expensive from across a room with no logo to help. Camel wool that holds a press through a winter.",
     details: [
@@ -1616,6 +1655,7 @@ export const mockProducts: MockProduct[] = [
   },
   {
     id: "pr5",
+    category: "Watches",
     description:
       "A Tank Louis on its original dial, unpolished and unredialled, which is the pairing that decides the resale floor on a watch this age. Manual wind, so it stops if you do — and the papers are present, which most 1978 examples cannot say.",
     details: [
@@ -1637,6 +1677,7 @@ export const mockProducts: MockProduct[] = [
   },
   {
     id: "pr6",
+    category: "Shoes",
     description:
       "The rubber-studded sole is the whole point: a walkable loafer that does not announce itself as a walking shoe. Unlined suede, so it takes the shape of the foot within a week and never quite goes back.",
     details: [
@@ -1659,6 +1700,7 @@ export const mockProducts: MockProduct[] = [
   },
   {
     id: "pr7",
+    category: "Shoes",
     description:
       "Intrecciato woven by hand, which is why no two panels align identically and why a repair is possible at all. Unlined and soft from the first wear; the leather is thin enough that a half size up is the safer buy.",
     details: [
@@ -1680,6 +1722,7 @@ export const mockProducts: MockProduct[] = [
   },
   {
     id: "pr8",
+    category: "Tailoring",
     description:
       "Linen cut loosely enough to hang rather than cling, in the undyed shade that reads as deliberate rather than unfinished. It creases — that is linen — and it is the two-piece that survives an August wedding in a hot room.",
     details: [
@@ -1701,6 +1744,7 @@ export const mockProducts: MockProduct[] = [
   },
   {
     id: "pr9",
+    category: "Tailoring",
     description:
       "Bias-cut silk, which is what makes a slip fall in a line instead of a tube, and what makes it unforgiving of a bad alteration. Straight neck, no lining, and heavy enough at 22 momme not to cling.",
     details: [
@@ -1719,6 +1763,137 @@ export const mockProducts: MockProduct[] = [
     badge: null,
     // 900×1800 — a 1:2 full-length shot, the shape a square would decapitate.
     image: resortSlipTall,
+  },
+  {
+    id: "pr10",
+    category: "Bags",
+    slug: "hermes-birkin-30-togo",
+    brand: "Hermès",
+    name: "Birkin 30, Togo",
+    price: { amount: 2140000, currency: "USD" },
+    merchant: "Fashionphile",
+    vendorUrl: "https://www.fashionphile.com",
+    matchNote: "The one that holds a laptop. Corners are honest for its age.",
+    description:
+      "A Birkin 30 in Togo, the grained calf that takes a knock without showing it. Papers present, and the hardware is unpolished — which is what you want on a bag this age, because a polish takes the edges with it.",
+    details: [
+      { label: "Material", value: "Togo calfskin, palladium hardware" },
+      { label: "Measurements", value: "30 × 22 × 16 cm" },
+      { label: "Condition", value: "Very good · corner wear consistent with use" },
+      { label: "Included", value: "Box, clochette, lock, two keys" },
+    ],
+    badge: "Verified",
+    image: heroBag,
+    focus: "object-[48%_50%]",
+  },
+  {
+    id: "pr11",
+    category: "Bags",
+    slug: "celine-16-medium-smooth-calf",
+    brand: "Celine",
+    name: "16 Bag, Medium",
+    price: { amount: 590000, currency: "USD" },
+    merchant: "Net-a-Porter",
+    vendorUrl: "https://www.net-a-porter.com",
+    matchNote: "Structured but not stiff — the compromise most bags miss.",
+    description:
+      "The 16 in smooth calf, which is the version that keeps its shape without reading as a briefcase. Unlined interior in suede, one flat pocket, and a clasp that opens one-handed.",
+    details: [
+      { label: "Material", value: "Smooth calfskin, brushed hardware" },
+      { label: "Measurements", value: "32 × 23 × 12 cm" },
+      { label: "Condition", value: "Excellent · faint interior marks" },
+      { label: "Included", value: "Dust bag" },
+    ],
+    badge: null,
+    image: heroBackpack,
+    focus: "object-[62%_55%]",
+  },
+  {
+    id: "pr12",
+    category: "Bags",
+    slug: "loewe-puzzle-small-classic",
+    brand: "Loewe",
+    name: "Puzzle Small",
+    price: { amount: 348000, currency: "USD" },
+    merchant: "Mr Porter",
+    vendorUrl: "https://www.mrporter.com",
+    matchNote: "Four ways to carry it, and it folds flat to pack.",
+    description:
+      "Cut from a single piece and folded rather than assembled, which is why it collapses flat and still holds a shape when full. Crossbody, shoulder, top handle or by hand.",
+    details: [
+      { label: "Material", value: "Classic calfskin" },
+      { label: "Measurements", value: "24 × 16 × 11 cm" },
+      { label: "Condition", value: "New in box" },
+      { label: "Included", value: "Box, dust bag, strap" },
+    ],
+    badge: null,
+    image: resortSlipTall,
+  },
+  {
+    id: "pr13",
+    category: "Bags",
+    slug: "the-row-margaux-15",
+    brand: "The Row",
+    name: "Margaux 15",
+    price: { amount: 495000, currency: "USD" },
+    merchant: "Matches",
+    vendorUrl: "https://www.matchesfashion.com",
+    matchNote: "No logo anywhere on it, which is the whole argument.",
+    description:
+      "Grained leather, a single compartment and two handles that sit flat when the bag is set down. There is no branding on the exterior at all — the recognition is the shape.",
+    details: [
+      { label: "Material", value: "Grained calfskin, leather lining" },
+      { label: "Measurements", value: "38 × 26 × 18 cm" },
+      { label: "Condition", value: "New with tags" },
+      { label: "Included", value: "Dust bag" },
+    ],
+    badge: "Low stock",
+    image: streetStyleFurCoat,
+    focus: "object-[60%_38%]",
+  },
+  {
+    id: "pr14",
+    category: "Outerwear",
+    slug: "max-mara-teddy-camel-coat",
+    brand: "Max Mara",
+    name: "Teddy Camel Coat",
+    price: { amount: 452000, currency: "USD" },
+    merchant: "Loro Piana",
+    vendorUrl: "https://www.maxmara.com",
+    matchNote: "Camel, mid-calf, and warm without a lining. Reads as the brief.",
+    description:
+      "Alpaca and wool brushed to a pile, cut oversized so it goes over tailoring. Unlined through the body, which is what keeps it from becoming a duvet at 12°C.",
+    details: [
+      { label: "Material", value: "Alpaca and virgin wool" },
+      { label: "Measurements", value: "Mid-calf · 116 cm back length" },
+      { label: "Condition", value: "New with tags" },
+      { label: "Included", value: "Garment bag" },
+    ],
+    badge: null,
+    image: heroRain,
+    focus: "object-[66%_45%]",
+  },
+  {
+    id: "pr15",
+    category: "Shoes",
+    slug: "church-s-shannon-derby",
+    brand: "Church's",
+    name: "Shannon Derby",
+    price: { amount: 87000, currency: "USD" },
+    merchant: "Mr Porter",
+    vendorUrl: "https://www.mrporter.com",
+    matchNote: "Resoleable, which is the only durability claim that means anything.",
+    description:
+      "Goodyear-welted derby in polished binder calf, on a rubber-tipped leather sole. The welt is the point: it can be resoled four or five times, so the shoe outlasts the sole by a decade.",
+    details: [
+      { label: "Material", value: "Polished binder calf, leather sole" },
+      { label: "Measurements", value: "UK 9 · fits true" },
+      { label: "Condition", value: "New in box" },
+      { label: "Included", value: "Box, dust bags, shoe trees" },
+    ],
+    badge: null,
+    image: sneakersStudio,
+    focus: "object-[50%_74%]",
   },
 ];
 

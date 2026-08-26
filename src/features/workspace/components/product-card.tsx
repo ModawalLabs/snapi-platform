@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check, Plus } from "lucide-react";
 import Link from "next/link";
 
 import { MediaFrame } from "@/components/ui/media-frame";
@@ -37,6 +37,9 @@ export function ProductCard({
   selected = false,
   atCapacity = false,
   onToggle,
+  addable = false,
+  inMission = false,
+  onToggleMission,
 }: {
   product: MockProduct;
   /**
@@ -66,6 +69,17 @@ export function ProductCard({
    */
   atCapacity?: boolean;
   onToggle?: () => void;
+  /**
+   * Whether this card can be filed into the open mission.
+   *
+   * True only in a mission workspace — a conversation or a brand page has nothing to
+   * file into. Suppressed while selecting, because Compare owns the grid in that mode
+   * and two different affordances on one tile is a coin toss for the reader.
+   */
+  addable?: boolean;
+  /** Already in the mission. Drives the glyph, the label and `aria-pressed`. */
+  inMission?: boolean;
+  onToggleMission?: () => void;
 }) {
   // Decided from the artwork's shape, not declared per product. A merchant feed
   // will not tell us how it wants to be cropped, and it should not have to.
@@ -98,7 +112,7 @@ export function ProductCard({
     : ({ href: href ?? routes.product(product.slug) } as const);
 
   return (
-    <article className={cn("group", selectable && "cursor-pointer")}>
+    <article className={cn("group relative", selectable && "cursor-pointer")}>
       <Shell
         {...(shellProps as { href: string })}
         className={cn(
@@ -211,6 +225,57 @@ export function ProductCard({
           </p>
         </div>
       </Shell>
+
+      {/* ── Add to mission ────────────────────────────────────────────────────
+          A *sibling* of the shell, never a child. The shell is the whole card and it
+          is either a link or a button; an interactive element inside either one is
+          invalid markup that browsers resolve however they like. Positioned over the
+          photograph instead, which is where it would have sat anyway.
+
+          Top-left, because the top-right corner already belongs to the condition
+          badge — and, while selecting, to the tick.
+
+          Revealed on hover, with the three fallbacks this app uses everywhere: focus
+          within the card, `focus-visible` on the button itself, and permanently
+          visible on touch where there is no hover to give.
+
+          Once the piece is in, the tick stays visible at all times. That is *state*
+          rather than an action, and state you can only see by hovering is state you
+          cannot see. */}
+      {addable && !selectable ? (
+        <button
+          type="button"
+          onClick={onToggleMission}
+          aria-pressed={inMission}
+          aria-label={
+            inMission
+              ? `Remove ${product.name} from this mission`
+              : `Add ${product.name} to this mission`
+          }
+          title={inMission ? "In this mission" : "Add to this mission"}
+          className={cn(
+            "absolute top-2.5 left-2.5 z-10 grid size-7 place-items-center rounded-full border backdrop-blur-sm",
+            "transition-[background-color,border-color,color,opacity,scale] duration-200",
+            "hover:scale-105",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+            inMission
+              ? // Fixed gold-on-dark rather than theme tokens: it sits on a
+                // photograph, and a photograph does not lighten because the UI did.
+                "border-gold-solid bg-gold-solid text-gold-content"
+              : cn(
+                  "border-white/40 bg-black/35 text-white",
+                  "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 focus-visible:opacity-100",
+                  "[@media(hover:none)]:opacity-100",
+                ),
+          )}
+        >
+          {inMission ? (
+            <Check className="size-3.5" strokeWidth={3} aria-hidden="true" />
+          ) : (
+            <Plus className="size-4" aria-hidden="true" />
+          )}
+        </button>
+      ) : null}
     </article>
   );
 }

@@ -44,6 +44,21 @@ export interface WorkspaceSeed {
   products: MockProduct[];
   /** Optional — omitted where the heading already says everything it would. */
   resultsNote?: string;
+  /**
+   * The mission's name, set only when this workspace *is* a mission.
+   *
+   * Its presence is what turns on the mission half of the results pane: the second
+   * tab, the collections, and the add control on every card. A conversation, an
+   * editorial story and a brand page are all searches with nothing to file into, so
+   * they leave it undefined and none of that renders.
+   *
+   * The name rather than the mission object, because the name is all any of it
+   * reads and nothing here has an endpoint to send an id to. The id joins it the day
+   * there is one. The view says the name out loud — "Added to A
+   * winter coat that isn't black" reads as a place, where "Added to this mission"
+   * reads as a system message.
+   */
+  missionName?: string;
 }
 
 /**
@@ -74,6 +89,7 @@ export function missionSeed(mission: MockMission): WorkspaceSeed {
     closeLabel: "Close mission",
     selfHref: routes.mission(mission.id),
     resultsNote: "Ranked by how closely each answers the brief",
+    missionName: mission.name,
     messages: [
       { id: "m-1", role: "user", body: mission.brief },
       {
@@ -92,7 +108,12 @@ export function missionSeed(mission: MockMission): WorkspaceSeed {
         body: "Here's everything currently in play. I've put the closest match first and noted what each one gets right, including the two that miss on one point — you should see those rather than have me quietly drop them.",
       },
     ],
-    products: productsFor(mission.id),
+    // Twelve rather than the default six. A mission is the one surface where the
+    // results are raw material rather than an answer — you file from them, and a
+    // collection built out of six candidates spread over five categories can never
+    // hold enough of anything to need a second screen. Twelve gives the deepest
+    // category six pieces, which is what makes the preview cap mean something.
+    products: productsFor(mission.id, 12),
   };
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowUpRight, Bookmark, Share2, ShoppingBag } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Bookmark, Check, Plus, Share2, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
@@ -50,6 +50,9 @@ export function ProductDetail({
   backHref,
   related,
   relatedHref,
+  missionName,
+  inMission = false,
+  onToggleMission,
 }: {
   product: MockProduct;
   /** The workspace URL without `?p=` — where "Back to results" goes. */
@@ -69,6 +72,18 @@ export function ProductDetail({
   related: MockProduct[];
   /** Builds the `?p=` URL for a related product. */
   relatedHref: (slug: string) => string;
+  /**
+   * The open mission's name, when this product was reached from one.
+   *
+   * Present only in a mission workspace, and its presence is what renders the filing
+   * control. The name is here because the button says it: "Add to A winter coat that
+   * isn't black" is a place you are putting something, where "Add to mission" is a
+   * form field.
+   */
+  missionName?: string;
+  /** Whether this piece is already filed into that mission. */
+  inMission?: boolean;
+  onToggleMission?: () => void;
 }) {
   /**
    * Four frames: the real photograph, then three placeholders.
@@ -325,6 +340,44 @@ export function ProductDetail({
               <SecondaryAction icon={Share2} label="Share" />
             </div>
           </div>
+
+          {/* ── Filing into the mission ────────────────────────────────────────
+              Its own row under the buying controls, and rendered only when the reader
+              arrived from a mission. It is a *labelled* button rather than a fourth
+              icon: adding to a mission is the action this whole surface exists to
+              support when you are inside one, and a glyph among three others is not
+              where you put the thing the page is for.
+
+              Outlined rather than filled, because Buy is the filled one. Two solid
+              gold buttons stacked would be two primaries, which is none.
+
+              The label carries the mission's name, truncated — briefs run long, and a
+              button that wraps to three lines stops reading as a button. */}
+          {missionName ? (
+            <button
+              type="button"
+              onClick={onToggleMission}
+              aria-pressed={inMission}
+              className={cn(
+                "mt-3 inline-flex w-full max-w-[450px] items-center justify-center gap-2 rounded-lg border px-4 py-2.5",
+                "text-[13px] font-semibold",
+                "transition-[background-color,border-color,color] duration-200",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                inMission
+                  ? "border-gold-border bg-gold-subtle text-gold"
+                  : "border-border-strong text-content hover:border-gold-border hover:bg-gold-subtle/50",
+              )}
+            >
+              {inMission ? (
+                <Check className="size-4 shrink-0" aria-hidden="true" />
+              ) : (
+                <Plus className="size-4 shrink-0" aria-hidden="true" />
+              )}
+              <span className="truncate">
+                {inMission ? "Added to" : "Add to"} {missionName}
+              </span>
+            </button>
+          ) : null}
 
           {/* ── Description ───────────────────────────────────────────────────
               Catalogue prose, then the facts. In that order because the prose is what

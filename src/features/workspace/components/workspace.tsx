@@ -5,6 +5,7 @@ import Link from "next/link";
 import * as React from "react";
 
 import { Logo } from "@/components/layout/logo";
+import { MissionCollections } from "@/features/workspace/components/mission-collections";
 import { ProductCard } from "@/features/workspace/components/product-card";
 import { ProductComparison } from "@/features/workspace/components/product-comparison";
 import { ProductDetail } from "@/features/workspace/components/product-detail";
@@ -54,6 +55,7 @@ export function Workspace({
   messages,
   products,
   resultsNote,
+  missionName,
 }: {
   eyebrow: string;
   title: string;
@@ -80,6 +82,8 @@ export function Workspace({
   products: MockProduct[];
   /** Optional one-liner above the grid on what these results are. */
   resultsNote?: string;
+  /** Set only when this workspace is a mission. See `WorkspaceSeed.missionName`. */
+  missionName?: string;
 }) {
   const [sheetOpen, setSheetOpen] = React.useState(false);
 
@@ -94,6 +98,40 @@ export function Workspace({
   const [picked, setPicked] = React.useState<string[]>([]);
 
   const selecting = mode === "select";
+
+  /**
+   * What has been filed into this mission, and which half of the pane is showing.
+   *
+   * Ids rather than products, so one array is the whole of it and the order comes from
+   * the results — see `addedProducts`. Both pieces of state are separate from `mode`:
+   * adding is not a mode, it is a tap on a card that leaves you exactly where you were,
+   * which is the difference between filing something and starting a task.
+   *
+   * Deliberately not lifted above the route. Nothing persists this yet, so a provider
+   * would only widen where the illusion holds — reload and it is gone either way — and
+   * the missions board's own `collections` count keeps its fixture value. That
+   * disagreement is real and visible, and it goes away with the first backend.
+   */
+  const [added, setAdded] = React.useState<string[]>([]);
+  const [tab, setTab] = React.useState<"results" | "mission">("results");
+
+  const toggleAdded = React.useCallback((id: string) => {
+    setAdded((current) =>
+      current.includes(id) ? current.filter((addedId) => addedId !== id) : [...current, id],
+    );
+  }, []);
+
+  /**
+   * The filed pieces, resolved and ordered as the results grid shows them.
+   *
+   * Grid order, not the order they were added: the collections are a place things live
+   * rather than a log of what you did, and a shelf that reorders itself by recency
+   * makes the piece you added yesterday hard to find today.
+   */
+  const addedProducts = React.useMemo(
+    () => products.filter((product) => added.includes(product.id)),
+    [added, products],
+  );
 
   /**
    * Toggle a pick, capped at `MAX_COMPARE`.
@@ -299,6 +337,12 @@ export function Workspace({
                 backHref={selfHref}
                 related={products.filter((item) => item.id !== opened.id).slice(0, 5)}
                 relatedHref={productHref}
+                // Filing works from the product page as well as the grid, and it is
+                // the same state either way: open a piece, add it, go back, and the
+                // tick is already on its card.
+                missionName={missionName}
+                inMission={added.includes(opened.id)}
+                onToggleMission={() => toggleAdded(opened.id)}
               />
             </div>
           ) : compared ? (
@@ -333,15 +377,52 @@ export function Workspace({
                 )}
               >
                 <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 pb-4">
-                  <h2 className="text-eyebrow text-content-subtle">
-                    {selecting
-                      ? // The count is the instruction. A bare "Select some" leaves the
-                        // reader counting ticks across a grid to work out where they
-                        // are — and at the ceiling it is the only thing explaining why
-                        // the next tap did nothing.
-                        `Select up to ${MAX_COMPARE} to compare · ${picked.length} of ${MAX_COMPARE}${atCapacity ? " · full" : ""}`
-                      : `${products.length} ${products.length === 1 ? "piece" : "pieces"} found`}
-                  </h2>
+                  {/* ── Heading, or the tab strip ─────────────────────────────
+                      A mission gets two tabs where every other workspace gets a
+                      count, and they occupy the same slot on purpose: the strip *is*
+                      the heading here, so the pane never carries both a title and a
+                      switch fighting for the same line.
+
+                      Hidden while selecting. Compare takes over the grid, and a tab
+                      that would abandon a half-made selection is a trapdoor. */}
+                  {missionName && !selecting ? (
+                    <div
+                      role="tablist"
+                      aria-label="Results or mission"
+                      // An inset track with one half filled, rather than two
+                      // underlined labels. Filing pieces into the mission is half of
+                      // what this surface is for, and an 11px small-caps label with a
+                      // hairline under it reads as a caption on the pane — something
+                      // describing where you are, not something to press. A switch
+                      // that looks like a switch is the whole of the fix.
+                      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border bg-surface p-1 shadow-premium-sm"
+                    >
+                      <PaneTab
+                        active={tab === "results"}
+                        count={products.length}
+                        onClick={() => setTab("results")}
+                      >
+                        Results
+                      </PaneTab>
+                      <PaneTab
+                        active={tab === "mission"}
+                        count={added.length}
+                        onClick={() => setTab("mission")}
+                      >
+                        In this mission
+                      </PaneTab>
+                    </div>
+                  ) : (
+                    <h2 className="text-eyebrow text-content-subtle">
+                      {selecting
+                        ? // The count is the instruction. A bare "Select some" leaves
+                          // the reader counting ticks across a grid to work out where
+                          // they are — and at the ceiling it is the only thing
+                          // explaining why the next tap did nothing.
+                          `Select up to ${MAX_COMPARE} to compare · ${picked.length} of ${MAX_COMPARE}${atCapacity ? " · full" : ""}`
+                        : `${products.length} ${products.length === 1 ? "piece" : "pieces"} found`}
+                    </h2>
+                  )}
 
                   {selecting ? (
                     <div className="flex items-center gap-2">
@@ -382,8 +463,11 @@ export function Workspace({
                   ) : (
                     <div className="flex min-w-0 items-center gap-4">
                       {/* Omitted entirely rather than rendered empty — an empty `<p>`
-                          here would still hold its line box and push the rule down. */}
-                      {resultsNote ? (
+                          here would still hold its line box and push the rule down.
+                          Suppressed on the mission tab too: "ranked by how closely
+                          each answers the brief" describes the search, and saying it
+                          over a set the reader chose by hand is simply false. */}
+                      {resultsNote && tab === "results" ? (
                         <p className="min-w-0 truncate text-[12px] text-content-subtle">
                           {resultsNote}
                         </p>
@@ -399,7 +483,7 @@ export function Workspace({
                           will ask of you, or the mode change on click is a surprise —
                           and the number is what tells you this is a set you build
                           rather than a single choice. */}
-                      {products.length >= 2 ? (
+                      {products.length >= 2 && tab === "results" ? (
                         <button
                           type="button"
                           onClick={() => setMode("select")}
@@ -431,7 +515,15 @@ export function Workspace({
                   "pb-56 lg:pb-10",
                 )}
               >
-                {products.length === 0 ? (
+                {missionName && tab === "mission" ? (
+                  <MissionCollections
+                    products={addedProducts}
+                    missionName={missionName}
+                    onRemove={toggleAdded}
+                    productHref={productHref}
+                    onFindMore={() => setTab("results")}
+                  />
+                ) : products.length === 0 ? (
                   <p className="py-20 text-center text-sm text-content-muted">
                     Nothing matched yet. Snapi is still looking.
                   </p>
@@ -449,6 +541,12 @@ export function Workspace({
                           // it; this is what makes it visible before you try.
                           atCapacity={atCapacity && !picked.includes(product.id)}
                           onToggle={() => togglePick(product.id)}
+                          // Filing into the mission: only ever on in a mission
+                          // workspace, and the card itself suppresses it while
+                          // Compare has the grid.
+                          addable={missionName !== undefined}
+                          inMission={added.includes(product.id)}
+                          onToggleMission={() => toggleAdded(product.id)}
                         />
                       </li>
                     ))}
@@ -460,5 +558,75 @@ export function Workspace({
         </section>
       </div>
     </div>
+  );
+}
+
+/**
+ * One tab in the results pane.
+ *
+ * A real `role="tab"` with `aria-selected`, inside the strip's `role="tablist"`. The
+ * panel below is not marked up as a `tabpanel` on purpose: it is the whole scrolling
+ * region of the pane, and pointing `aria-controls` at a container that also holds the
+ * sticky strip itself would describe a loop.
+ *
+ * ## The count is the point of the tab
+ *
+ * "In this mission · 3" tells you both where you are and what is there, and it is what
+ * makes adding legible: the number goes up as you tap, so the tap has a visible
+ * consequence even while you stay on the results. Zero is rendered rather than hidden —
+ * "In this mission · 0" is an invitation, where a bare label is a question.
+ *
+ * ## A filled half, not an underline
+ *
+ * It began as two small-caps labels with a 2px rule under the active one, which is a
+ * perfectly good tab strip and the wrong control here: it read as a caption telling you
+ * where you were, when filing into the mission is half of what the surface is *for*.
+ * The active half is now a solid gold segment inside an inset track — the same fill as
+ * the Compare button, which is the pane's other primary, so the two agree about what
+ * "press me" looks like instead of one whispering.
+ *
+ * Sentence case at 13px rather than 11px small-caps for the same reason. Small caps are
+ * for labelling things; this is a thing you press.
+ */
+function PaneTab({
+  active,
+  count,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  count: number;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap",
+        "transition-[background-color,color,box-shadow] duration-200",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        active
+          ? "bg-gold-solid text-gold-content shadow-[var(--shadow-edge)]"
+          : "text-content-muted hover:text-content",
+      )}
+    >
+      {children}
+
+      {/* The count in its own chip, so it reads as a quantity rather than as part of
+          the label. On the filled half it is a darker well in the gold — a *lighter*
+          chip there would glow brighter than the label it belongs to. */}
+      <span
+        className={cn(
+          "tabular grid min-w-[1.25rem] place-items-center rounded-full px-1 text-[11px] font-semibold",
+          active ? "bg-[oklch(20%_0.02_70/0.14)] text-gold-content" : "text-content-subtle",
+        )}
+      >
+        {count}
+      </span>
+    </button>
   );
 }

@@ -61,9 +61,12 @@ const REVEAL_CONTROLS = cn(
  *
  * ## Structure
  *
- * The card is **not** a link. It holds three interactive elements — rename, delete
- * and "Open" — and nesting them inside an anchor is invalid HTML that browsers
- * resolve however they like.
+ * The whole tile opens the mission, and the `<article>` is still **not** an anchor.
+ * It holds rename, delete and a text input, and interactive elements nested inside an
+ * anchor are invalid HTML that browsers resolve however they like. So the link is an
+ * overlay covering the card and the controls sit above it — see the note at the
+ * overlay itself. Clicking the photograph, the name or the footer all navigate;
+ * clicking a control does what the control says.
  *
  * Rename happens in place. A dialog would be heavier than the edit deserves, and
  * an in-place input keeps the name legible in its real context while you change it.
@@ -137,6 +140,35 @@ export function MissionCard({
         />
 
         <div className="on-photo absolute inset-0 flex flex-col p-4 sm:p-5">
+          {/* ── The card is the link ────────────────────────────────────────
+              An overlay anchor covering the whole tile, rather than the card
+              *being* an anchor. The distinction is the reason this works: the card
+              also holds rename, delete and a text input, and interactive elements
+              inside an anchor are invalid markup that browsers resolve however they
+              feel. A sibling that happens to cover the same area nests nothing.
+
+              It is a real `<Link>`, so everything a link does still works —
+              ⌘-click, middle-click, "copy link address", and the focus ring drawn
+              around the whole card by `focus-visible` below.
+
+              The controls each carry `relative z-10` to sit above it. Without that
+              the overlay would swallow their clicks, because a positioned element
+              paints over static siblings regardless of DOM order.
+
+              Not rendered while renaming. Mid-edit, a click anywhere on the card
+              means "I am done with this field", not "take me to another page", and
+              an overlay that navigated away would throw the rename out. */}
+          {editing ? null : (
+            <Link
+              href={routes.mission(mission.id)}
+              aria-label={`Open ${mission.name}`}
+              className={cn(
+                "absolute inset-0 rounded-xl",
+                "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white/70",
+              )}
+            />
+          )}
+
           {/* Revealed on hover — see `REVEAL_CONTROLS`.
 
               Pinned visible while renaming, and that exception is the important one:
@@ -146,7 +178,7 @@ export function MissionCard({
               moment focus sits in the input and the mouse is elsewhere. */}
           <header
             className={cn(
-              "flex shrink-0 items-center justify-end gap-1.5",
+              "relative z-10 flex shrink-0 items-center justify-end gap-1.5",
               editing ? "opacity-100" : REVEAL_CONTROLS,
             )}
           >
@@ -170,7 +202,15 @@ export function MissionCard({
 
           {/* `justify-end` — the name hangs off the bottom of the frame, where the
               scrim is darkest and the type is guaranteed legible. */}
-          <div className="flex min-h-0 flex-1 flex-col justify-end overflow-hidden pt-4">
+          {/* `z-10` on the name block only while renaming: the input has to be
+              reachable, and outside that state the overlay link *should* cover the
+              name so clicking it opens the mission like the rest of the card. */}
+          <div
+            className={cn(
+              "flex min-h-0 flex-1 flex-col justify-end overflow-hidden pt-4",
+              editing && "relative z-10",
+            )}
+          >
             {editing ? (
               <form
                 onSubmit={(event) => {
@@ -203,6 +243,9 @@ export function MissionCard({
             )}
           </div>
 
+          {/* No `z-10`. The footer is the collections count and the Open
+              affordance, and neither is a control any more — letting the overlay
+              cover them is what makes the bottom of the card clickable too. */}
           <div className="mt-4 flex shrink-0 items-end justify-between gap-3 border-t border-white/15 pt-3.5">
             <dl>
               <dt className="text-eyebrow text-white/55">Collections</dt>
@@ -211,12 +254,19 @@ export function MissionCard({
               </dd>
             </dl>
 
-            <Link
-              href={routes.mission(mission.id)}
+            {/* A label, not a link. The whole card is the link now, and two
+                anchors to one destination means a screen reader announces the
+                mission twice and a keyboard user tabs through it twice.
+                `aria-hidden` leaves the overlay's own label as the only one.
+
+                It stays visible because it is doing the other half of a link's job:
+                telling you the card is one. A tile that navigates with nothing on it
+                saying so is a tile people do not click. */}
+            <span
+              aria-hidden="true"
               className={cn(
-                "inline-flex shrink-0 items-center gap-1.5 rounded-sm text-[13px] font-semibold whitespace-nowrap text-gold",
-                "transition-colors duration-300 hover:text-white",
-                "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/70",
+                "inline-flex shrink-0 items-center gap-1.5 text-[13px] font-semibold whitespace-nowrap text-gold",
+                "transition-colors duration-300 group-hover:text-white",
               )}
             >
               Open
@@ -224,7 +274,7 @@ export function MissionCard({
                 className="size-3.5 transition-transform duration-300 group-hover:translate-x-0.5"
                 aria-hidden="true"
               />
-            </Link>
+            </span>
           </div>
         </div>
       </MediaFrame>
