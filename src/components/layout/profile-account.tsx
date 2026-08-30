@@ -162,9 +162,99 @@ function ProfileDialog({
 }) {
   const { flavour, setFlavour } = useFlavour();
 
+  /**
+   * Memory, as state rather than as the fixture read directly.
+   *
+   * Adding a tag has to land somewhere and there is no backend, so it lands here. The
+   * fixture is never mutated: every change maps to new section objects, so `mockMemory`
+   * stays what it says it is — a starting point — and re-opening the dialog does not
+   * find it quietly edited.
+   *
+   * Session-lived, like everything else without an endpoint behind it. A tag added here
+   * is gone on reload, and that is the honest state of the feature rather than a bug.
+   */
+  const [sections, setSections] = React.useState(mockMemory);
+
+  /** Which section is taking a new tag, and what has been typed into it. */
+  const [composingId, setComposingId] = React.useState<string | null>(null);
+  const [draft, setDraft] = React.useState("");
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  /**
+   * Set for the length of one pointer gesture, when a press on Add closed the field
+   * that Add had opened.
+   *
+   * Without it the toggle cannot close. A press runs `mousedown` and then `click`, and
+   * the `mousedown` handler is what has to do the closing — by `click` the field would
+   * already have blurred and committed. That leaves `click` looking at a section with
+   * no composer open and dutifully opening one, so the field shuts and reopens inside a
+   * single press. The ref is how the second half of the gesture knows what the first
+   * half did.
+   */
+  const closedByPress = React.useRef(false);
+
+  // Focus on opening the field, and on the transition only — never on mount, which
+  // would put the cursor in a settings row the moment the dialog appeared.
+  React.useEffect(() => {
+    if (composingId) inputRef.current?.focus();
+  }, [composingId]);
+
+  /**
+   * Add the typed tag to the head of its section.
+   *
+   * The head, not the tail, and that is the whole behaviour: what you just told Snapi
+   * is the most specific thing it knows, and a new pill appended to the end of four
+   * others is a pill you have to go looking for to confirm it landed.
+   *
+   * Silently ignores a blank, and ignores a duplicate rather than refusing it out loud.
+   * "Quiet luxury" typed twice is a user who wants it remembered, not an error — and
+   * an error message on a settings row for a tag that is already there would be the
+   * app arguing with someone who agrees with it.
+   *
+   * The field stays open with the value cleared, because sections take *types* plural
+   * and the second one should not cost another click.
+   */
+  function addTag(sectionId: string) {
+    const value = draft.trim();
+    setDraft("");
+    if (value.length === 0) return;
+
+    setSections((current) =>
+      current.map((section) => {
+        if (section.id !== sectionId) return section;
+        const exists = section.tags.some((tag) => tag.toLowerCase() === value.toLowerCase());
+        return exists ? section : { ...section, tags: [value, ...section.tags] };
+      }),
+    );
+  }
+
+  /**
+   * Drop a tag from its section.
+   *
+   * No confirmation and no undo window, and both are deliberate. This is not a delete
+   * — nothing is destroyed and nothing is lost downstream. It is Snapi forgetting a
+   * preference it inferred, which is a thing the user is *entitled* to be casual about,
+   * and putting a dialog in front of it would make correcting the assistant feel like
+   * an administrative act. Retyping it costs one click and the field is right there.
+   */
+  function forgetTag(sectionId: string, tag: string) {
+    setSections((current) =>
+      current.map((section) =>
+        section.id === sectionId
+          ? { ...section, tags: section.tags.filter((existing) => existing !== tag) }
+          : section,
+      ),
+    );
+  }
+
+  function closeComposer() {
+    setComposingId(null);
+    setDraft("");
+  }
+
   // Derived, not authored. A hand-written total is wrong the first time a section
   // gains a tag, and it is the kind of wrong nobody notices for a release.
-  const rememberedCount = mockMemory.reduce((total, section) => total + section.tags.length, 0);
+  const rememberedCount = sections.reduce((total, section) => total + section.tags.length, 0);
 
   return (
     <dialog
@@ -185,56 +275,65 @@ function ProfileDialog({
         // ragged, which is what made the panel feel cramped rather than the
         // spacing did. Widen the copy before widening this again.
         "m-auto w-[min(42rem,calc(100vw-2rem))] rounded-2xl border border-border bg-surface p-0 text-content shadow-premium-lg",
-        // The card is taller than a short laptop window once Memory is filled in,
-        // so it caps and scrolls internally. `dvh` rather than `vh`: on iOS the
-        // latter measures the viewport as if the browser chrome were retracted,
-        // which puts the bottom of the dialog under the address bar.
-        "max-h-[calc(100dvh-2rem)] overflow-hidden",
+        // 48rem, or the window less a margin, whichever is smaller. The cap is the
+        // point: Memory grows as tags are added, and without a ceiling the dialog
+        // stretches to fill a tall display until it stops reading as a panel over the
+        // app and starts reading as a page. Past 48rem it scrolls instead.
+        //
+        // `dvh` rather than `vh`: on iOS the latter measures the viewport as if the
+        // browser chrome were retracted, which puts the bottom of the dialog under the
+        // address bar.
+        // `open:flex`, never a bare `flex`. The browser hides a closed dialog with
+        // `dialog:not([open]) { display: none }`, and a `display` of our own on the
+        // element beats it — which renders the whole panel inline, in the sidebar, at
+        // all times. It is the one property this element must not be given
+        // unconditionally, and the failure looks like a bug in the open state rather
+        // than in the closed one.
+        "max-h-[min(48rem,calc(100dvh-2rem))] overflow-hidden open:flex open:flex-col",
         "backdrop:bg-black/55 backdrop:backdrop-blur-sm",
         "open:animate-in open:duration-200 open:zoom-in-95 open:fade-in",
       )}
     >
-      {/* Padding lives on the sections rather than on the dialog, so the backdrop
-          click test above is not defeated by the dialog's own padding counting as
-          "inside the card". This is also the scroll container. */}
-      <div className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain">
-        {/* ── Header ──────────────────────────────────────────────────────────
+      {/* ── Header ──────────────────────────────────────────────────────────
             A banded header rather than a row of text at the top of a form. The
             same ambient wash every page header carries, so the dialog opens in the
             app's own register instead of looking like a system sheet. */}
-        <header className="ambient-canvas relative border-b border-border px-6 py-6 sm:px-7">
-          <div className="flex items-center gap-4">
-            <Avatar name={user.name} src={user.avatarUrl} size="xl" />
+      <header className="ambient-canvas relative shrink-0 border-b border-border px-6 py-6 sm:px-7">
+        <div className="flex items-center gap-4">
+          <Avatar name={user.name} src={user.avatarUrl} size="xl" />
 
-            <div className="min-w-0 flex-1">
-              {/* The UI sans, not the display serif. The serif is reserved for
+          <div className="min-w-0 flex-1">
+            {/* The UI sans, not the display serif. The serif is reserved for
                   editorial and page titles; a signed-in user's own name is a piece
                   of interface, and setting it in Oranienbaum reads as a headline
                   about the person rather than a label. */}
-              <h2
-                id="profile-dialog-title"
-                className="truncate text-lg leading-tight font-semibold"
-              >
-                {user.name}
-              </h2>
-              <p className="mt-1 truncate text-[13px] text-content-subtle">{user.email}</p>
-            </div>
-
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close profile"
-              className={cn(
-                "-mt-2 -mr-1 grid size-8 shrink-0 place-items-center self-start rounded-md text-content-subtle",
-                "transition-[background-color,color] duration-200 hover:bg-surface-raised hover:text-content",
-                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-              )}
-            >
-              <X className="size-4" aria-hidden="true" />
-            </button>
+            <h2 id="profile-dialog-title" className="truncate text-lg leading-tight font-semibold">
+              {user.name}
+            </h2>
+            <p className="mt-1 truncate text-[13px] text-content-subtle">{user.email}</p>
           </div>
-        </header>
 
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close profile"
+            className={cn(
+              "-mt-2 -mr-1 grid size-8 shrink-0 place-items-center self-start rounded-md text-content-subtle",
+              "transition-[background-color,color] duration-200 hover:bg-surface-raised hover:text-content",
+              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+            )}
+          >
+            <X className="size-4" aria-hidden="true" />
+          </button>
+        </div>
+      </header>
+
+      {/* Padding lives on the sections rather than on the dialog, so the backdrop
+          click test above is not defeated by the dialog's own padding counting as
+          "inside the card". This is the scroll container, and the header above it is
+          not in it: at this height the name and the close control would be the first
+          things to scroll away, and they are the two things a panel should keep. */}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {/* ── Flavour ─────────────────────────────────────────────────────── */}
         <section className="px-6 py-6 sm:px-7">
           <p className="text-eyebrow text-content-subtle">Your Snapi</p>
@@ -316,7 +415,7 @@ function ProfileDialog({
               much space sat between them. The label column collapses below `sm`,
               where 10rem of it would leave the tags nowhere to go. */}
           <ul className="mt-5 divide-y divide-border border-y border-border">
-            {mockMemory.map((section) => (
+            {sections.map((section) => (
               <li
                 key={section.id}
                 className="grid gap-2 py-4 sm:grid-cols-[10.5rem_1fr_auto] sm:items-start sm:gap-5"
@@ -327,12 +426,98 @@ function ProfileDialog({
                     and the row that has to absorb them should be the one that
                     shipped — not a rewrite later. */}
                 <div className="flex flex-wrap items-center gap-2">
+                  {/* The field sits at the head of the row, where the tag it is about
+                      to make will appear. Putting it at the end — beside the Add
+                      button that opened it — would have the pill jump to the other
+                      side of the row on submit, which reads as the wrong thing
+                      happening even though it is the right one. */}
+                  {composingId === section.id ? (
+                    <form
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        addTag(section.id);
+                      }}
+                    >
+                      <input
+                        ref={inputRef}
+                        value={draft}
+                        onChange={(event) => setDraft(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key !== "Escape") return;
+                          // Stop the dialog seeing it: a native `<dialog>` closes on
+                          // Escape, and abandoning a half-typed tag should not also
+                          // shut the whole profile.
+                          event.preventDefault();
+                          event.stopPropagation();
+                          closeComposer();
+                        }}
+                        // Committing on blur as well as on submit: people click away
+                        // far more often than they press Enter, and losing a typed tag
+                        // to a stray click is the kind of small betrayal people
+                        // remember. The field closes with it, because a blurred field
+                        // left open is a control with no cursor in it.
+                        onBlur={() => {
+                          addTag(section.id);
+                          setComposingId(null);
+                        }}
+                        // Two or three words, like the pills beside it. The cap is what
+                        // stops a sentence being typed into a row of labels.
+                        maxLength={24}
+                        placeholder="Add a type…"
+                        aria-label={`New tag for ${section.label}`}
+                        className={cn(
+                          "w-[9.5rem] rounded-full border border-gold-border bg-surface px-2.5 py-1",
+                          "text-[12px] text-content placeholder:text-content-subtle",
+                          "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
+                        )}
+                      />
+                    </form>
+                  ) : null}
+
                   {section.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="rounded-full border border-border bg-surface-raised px-2.5 py-1 text-[12px] whitespace-nowrap text-content"
+                      className={cn(
+                        "group/tag flex items-center gap-1 rounded-full border border-border bg-surface-raised py-1 pr-1 pl-2.5",
+                        "text-[12px] whitespace-nowrap text-content",
+                        "transition-[border-color] duration-200 hover:border-border-strong",
+                      )}
                     >
                       {tag}
+
+                      {/* ── Forget this ────────────────────────────────────────
+                          A button inside a `<span>`, which is legal — the pill is
+                          not itself interactive, so nothing is nested in anything.
+
+                          The space is *reserved* rather than made on hover. These
+                          pills wrap, and a control that appears on hover changes the
+                          pill's width, which reflows the row and can move the pill
+                          out from under the cursor mid-reach. Opacity costs nothing
+                          in layout.
+
+                          Revealed the usual three ways — pointer, focus within the
+                          pill, and permanently on touch, where there is no hover to
+                          give and forgetting a tag would otherwise be impossible.
+
+                          `title` as well as the label: the glyph is a bare cross and
+                          the wording is what makes it "forget this" rather than
+                          "close something". */}
+                      <button
+                        type="button"
+                        onClick={() => forgetTag(section.id, tag)}
+                        aria-label={`Forget ${tag}, from ${section.label}`}
+                        title="Forget this"
+                        className={cn(
+                          "grid size-4 shrink-0 place-items-center rounded-full",
+                          "text-content-subtle opacity-0 transition-[background-color,color,opacity] duration-200",
+                          "group-focus-within/tag:opacity-100 group-hover/tag:opacity-100 focus-visible:opacity-100",
+                          "[@media(hover:none)]:opacity-100",
+                          "hover:bg-danger hover:text-white",
+                          "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
+                        )}
+                      >
+                        <X className="size-2.5" strokeWidth={3} aria-hidden="true" />
+                      </button>
                     </span>
                   ))}
                 </div>
@@ -349,9 +534,34 @@ function ProfileDialog({
                   // announcements, and nothing tells a screen-reader user which
                   // list they are adding to.
                   aria-label={`Add a tag to ${section.label}`}
-                  // Inert for now — same call as the flavour switcher. Left as a
-                  // real control rather than a disabled one, since the action is
-                  // not unavailable to this user, it simply is not built.
+                  aria-expanded={composingId === section.id}
+                  // Opens the field at the head of this row, or closes it if this row
+                  // already has it. `onMouseDown` rather than `onClick` for the close
+                  // half: the open field commits on blur, and blur fires first — by
+                  // click time `composingId` would already be null and the button
+                  // would helpfully reopen what the user was closing.
+                  onMouseDown={(event) => {
+                    if (composingId !== section.id) return;
+                    // `preventDefault` keeps focus where it is, so the field's own blur
+                    // does not fight this for control of the same state.
+                    event.preventDefault();
+                    closedByPress.current = true;
+                    closeComposer();
+                  }}
+                  onClick={() => {
+                    if (closedByPress.current) {
+                      closedByPress.current = false;
+                      return;
+                    }
+                    // Reached by keyboard, where there is no `mousedown` to have done
+                    // the closing already.
+                    if (composingId === section.id) {
+                      closeComposer();
+                      return;
+                    }
+                    setDraft("");
+                    setComposingId(section.id);
+                  }}
                   className={cn(
                     "flex w-fit items-center gap-1 rounded-full border border-dashed border-gold-border px-2.5 py-1",
                     // Dashed and in the accent, so it is legible as the one

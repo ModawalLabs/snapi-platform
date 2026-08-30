@@ -12,8 +12,9 @@ import { cn } from "@/lib/utils";
  *
  * Nothing here filters anything yet. The field accepts text and the grid does not
  * change; the pills are real buttons that do nothing. That is the same call the
- * composer's category pills and the profile dialog's "Add tag" already make, for the
- * same reason: the action is not unavailable to this user, it simply is not built.
+ * composer's category pills already make, for the same reason: the action is not
+ * unavailable to this user, it simply is not built. (The profile dialog's "Add tag"
+ * was the other example and is no longer one — it adds tags now.)
  *
  * What it explicitly does *not* do is move the selected pill on click. A highlight
  * that travels while the grid stays put reads as a bug — the user concludes the
