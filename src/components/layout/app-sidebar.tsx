@@ -1,20 +1,21 @@
 "use client";
 
-import { Bell, ChevronsLeft, LogOut, PanelLeft, X } from "lucide-react";
+import { Bell, ChevronsLeft, PanelLeft, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 
 import { AskSnapiButton } from "@/components/layout/ask-snapi-button";
 import { Logo } from "@/components/layout/logo";
-import { ProfileAccount } from "@/components/layout/profile-account";
-import { SidebarAction, SidebarItem } from "@/components/layout/sidebar-item";
+import { PlanBadge } from "@/components/layout/plan-badge";
+import { Avatar } from "@/components/ui/avatar";
+import { SidebarItem } from "@/components/layout/sidebar-item";
 import { useSidebar } from "@/components/layout/sidebar-provider";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Tooltip } from "@/components/ui/tooltip";
 import { sidebarNav } from "@/config/nav";
 import { routes } from "@/config/routes";
-import { mockCounts, mockRecents, type MockRecent } from "@/lib/mock-data";
+import { mockCounts, mockRecents, mockUser, type MockRecent } from "@/lib/mock-data";
 import { MODALITY_ICON } from "@/lib/modality";
 import { groupByRecency } from "@/lib/recency";
 import { cn } from "@/lib/utils";
@@ -205,43 +206,51 @@ export function AppSidebar() {
               countLabel="unread"
               onNavigate={() => setMobileOpen(false)}
             />
-            {/* Opens a dialog rather than navigating: everything the account row
-                led to — identity, flavour, memory — fits in one card, and a
-                round trip to a page for it would lose the reader's place. */}
-            <ProfileAccount collapsed={railed} />
+            {/* The account, as a row of the menu rather than a card at the foot of
+                it. It was an avatar over a name over an email at 56px, opening a
+                dialog — three lines and a modal in a rail whose every other row is a
+                glyph and a word, which is what made it read as a different kind of
+                object bolted on at the bottom.
+
+                Same component as every row above, so height, padding, hover, focus
+                ring and active marker cannot drift. The icon slot takes the avatar
+                because the row is a person, and the badge slot takes the edition
+                because that is the one fact about the account worth carrying in the
+                menu. The name and the pill, and nothing else. */}
+            <SidebarItem
+              href={routes.profile()}
+              leading={
+                <Avatar
+                  name={mockUser.name}
+                  src={mockUser.avatarUrl}
+                  size="sm"
+                  className="size-5 shrink-0 text-[10px]"
+                />
+              }
+              badge={<PlanBadge />}
+              label={mockUser.name}
+              collapsed={railed}
+              active={isActive(routes.profile())}
+              tooltip={`${mockUser.name} — account`}
+              onNavigate={() => setMobileOpen(false)}
+            />
           </div>
         </div>
 
-        {/* Footer: theme + logout. Pinned to the bottom edge. */}
+        {/* Footer: theme. Pinned to the bottom edge. */}
         <div className={cn("shrink-0 pt-2 pb-3", railed ? "px-3" : "px-4")}>
           <div className="rule-fade mb-2 h-px" />
 
+          {/* Theme only. Log out moved onto the account page, and the reason is this
+              row: two controls of the same size sat here, one of which changed a
+              colour and the other of which ended the session. A sign-out has no
+              business being a neighbour to a preference. */}
           {railed ? (
             <div className="flex flex-col items-center gap-0.5">
               <ThemeToggle collapsed />
-              <SidebarAction
-                icon={LogOut}
-                label="Log out"
-                collapsed
-                tone="danger"
-                onClick={handleLogout}
-              />
             </div>
           ) : (
-            <div className="flex items-center justify-between gap-2">
-              <ThemeToggle />
-              <button
-                type="button"
-                onClick={handleLogout}
-                className={cn(
-                  "flex h-9 items-center gap-2 rounded-md px-2.5 text-sm font-medium text-content-muted hover:bg-danger-subtle hover:text-danger",
-                  "transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-                )}
-              >
-                <LogOut className="size-4" aria-hidden="true" />
-                Log out
-              </button>
-            </div>
+            <ThemeToggle />
           )}
         </div>
       </aside>
@@ -250,10 +259,6 @@ export function AppSidebar() {
 }
 
 /** Placeholder — swap for the real session teardown once auth exists. */
-function handleLogout() {
-  // Intentionally inert in the UI-only build.
-}
-
 /**
  * Recent conversations, bucketed by recency.
  *

@@ -26,6 +26,7 @@ export const routes = {
   snapiList: () => "/list",
   /** Linked from the sidebar. No page yet. */
   notifications: () => "/notifications",
+  profile: () => "/profile",
 
   // Conversations
   /**

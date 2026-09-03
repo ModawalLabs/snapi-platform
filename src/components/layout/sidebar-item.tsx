@@ -25,7 +25,26 @@ import { cn } from "@/lib/utils";
 
 export interface SidebarItemProps {
   href: string;
-  icon: LucideIcon;
+  /** The row's glyph. Omitted only when `leading` supplies something in its place. */
+  icon?: LucideIcon;
+  /**
+   * Replaces the icon slot with arbitrary content — an avatar, in practice.
+   *
+   * Added for the account row, which belongs in the menu and reads as one of its rows,
+   * but whose "icon" is a person rather than a symbol. It goes through this component
+   * rather than being built beside it so the height, padding, hover, focus ring and
+   * active marker cannot drift from the rows above it, which is the whole reason this
+   * component exists.
+   */
+  leading?: React.ReactNode;
+  /**
+   * Replaces the numeric count with arbitrary content — the edition pill, in practice.
+   *
+   * Kept separate from `count` rather than widening it: the count has meaning attached
+   * (work the user has not seen, folded into the accessible name) and a text badge has
+   * none, so conflating them would put "Shivansh, SIGNATURE new" in a screen reader.
+   */
+  badge?: React.ReactNode;
   label: string;
   collapsed: boolean;
   active?: boolean;
@@ -40,6 +59,8 @@ export interface SidebarItemProps {
 export function SidebarItem({
   href,
   icon: Icon,
+  leading,
+  badge,
   label,
   collapsed,
   active = false,
@@ -76,16 +97,23 @@ export function SidebarItem({
         />
       ) : null}
 
-      <Icon
-        className={cn("size-[18px] shrink-0 transition-colors", active && "text-gold")}
-        aria-hidden="true"
-      />
+      {/* One slot, two possible fillings. `leading` wins where it is given, and the
+          `size-[18px]` on the glyph is what the avatar has to match — see the account
+          row, which passes a 20px one for the extra weight a face needs to read at all. */}
+      {leading ??
+        (Icon ? (
+          <Icon
+            className={cn("size-[18px] shrink-0 transition-colors", active && "text-gold")}
+            aria-hidden="true"
+          />
+        ) : null)}
 
       {collapsed ? (
         <Tooltip label={tooltip ?? label} />
       ) : (
         <>
           <span className="min-w-0 flex-1 truncate">{label}</span>
+          {badge}
           {hasCount ? (
             <span
               aria-hidden="true"
@@ -114,54 +142,5 @@ export function SidebarItem({
         />
       ) : null}
     </Link>
-  );
-}
-
-/**
- * Button-shaped sibling of SidebarItem, for actions rather than destinations
- * (logout, theme, collapse). Same metrics so rows line up across both kinds.
- */
-export function SidebarAction({
-  icon: Icon,
-  label,
-  collapsed,
-  tooltip,
-  onClick,
-  tone = "default",
-  children,
-}: {
-  icon: LucideIcon;
-  label: string;
-  collapsed: boolean;
-  tooltip?: string;
-  onClick?: () => void;
-  tone?: "default" | "danger";
-  children?: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      className={cn(
-        "group relative flex h-10 items-center rounded-md text-sm font-medium",
-        "transition-[background-color,color] duration-150",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-        collapsed ? "w-10 justify-center" : "w-full gap-3 px-3",
-        tone === "danger"
-          ? "text-content-muted hover:bg-danger-subtle hover:text-danger"
-          : "text-content-muted hover:bg-surface-raised hover:text-content",
-      )}
-    >
-      <Icon className="size-[18px] shrink-0" aria-hidden="true" />
-      {collapsed ? (
-        <Tooltip label={tooltip ?? label} />
-      ) : (
-        <>
-          <span className="min-w-0 flex-1 truncate text-left">{label}</span>
-          {children}
-        </>
-      )}
-    </button>
   );
 }
