@@ -1,5 +1,3 @@
-import { Sparkles } from "lucide-react";
-
 import type { MockMessage } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
@@ -33,16 +31,13 @@ export function WorkspaceThread({ messages }: { messages: MockMessage[] }) {
             </p>
           </li>
         ) : (
-          <li key={message.id} className="flex gap-3">
-            <span
-              className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full border border-gold-border bg-gold-subtle"
-              aria-hidden="true"
-            >
-              <Sparkles className="size-3 text-gold" />
-            </span>
-            <p className="min-w-0 flex-1 text-sm leading-relaxed text-content-muted">
-              {message.body}
-            </p>
+          // No mark beside Snapi's turns. A gold roundel on every reply was a
+          // signature repeated down the column, and the thread already says who is
+          // speaking by construction: the user's turns are tinted, aligned right and
+          // bounded, and everything else is Snapi. One of the two needs a treatment,
+          // not both.
+          <li key={message.id}>
+            <p className="text-sm leading-relaxed text-content-muted">{message.body}</p>
           </li>
         ),
       )}

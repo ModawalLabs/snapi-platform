@@ -1,6 +1,7 @@
-import { Check, Plus } from "lucide-react";
+import { Bookmark, Check, Plus } from "lucide-react";
 import Link from "next/link";
 
+import { Cart } from "@/components/ui/icons";
 import { MediaFrame } from "@/components/ui/media-frame";
 import { routes } from "@/config/routes";
 import { fitForTile, imageRatio } from "@/lib/media";
@@ -276,6 +277,97 @@ export function ProductCard({
           )}
         </button>
       ) : null}
+
+      {/* ── Save and buy, from the grid ───────────────────────────────────────
+          The two things you do with a piece besides open it. On the product page they
+          are a row of glyphs beside Buy; here they are the same two glyphs in the
+          corner of the photograph, so the common case — you can already see it is the
+          one you want — does not cost a page.
+
+          ⚠️ Not wired. They render, they light up, and they do nothing yet: the cart
+          and the list are both fixtures with no writer, and pointing these at local
+          state would make a card claim a piece was saved while the page that lists
+          saved pieces knew nothing about it. That is worse than a control that
+          visibly has not been built. When there is somewhere to write, they take an
+          `onSave`/`onAddToCart` and an `aria-pressed`, exactly like the mission
+          button above them.
+
+          ## Positioning
+
+          The wrapper exists to give the buttons the *photograph's* bottom edge rather
+          than the card's. Everything here is a sibling of the shell — an interactive
+          element inside a link or a button is invalid markup — so it is positioned
+          against the article, whose height includes the caption. `inset-x-0 top-0`
+          with `aspect-square` reproduces the image box exactly, because the image is
+          a full-width square at the top of the card, and it does so without a hard-coded
+          height that would need editing the day the tile ratio changes.
+
+          `pointer-events-none` on the wrapper and back on for the buttons: a
+          transparent square lying over the top half of the card would otherwise
+          swallow every click meant for the link underneath it.
+
+          Hidden while selecting, like the mission control. During a comparison the
+          card is a single choosable target, and two live buttons inside something you
+          are being asked to tap as a whole is a way to mis-tap it. */}
+      {!selectable ? (
+        <div className="pointer-events-none absolute inset-x-0 top-0 aspect-square">
+          <div className="absolute right-2.5 bottom-2.5 flex items-center gap-1.5">
+            <QuickAction
+              icon={Bookmark}
+              label={`Save ${product.name} to your Snapi List`}
+              title="Save to Snapi List"
+            />
+            <QuickAction
+              icon={Cart}
+              label={`Add ${product.name} to your cart`}
+              title="Add to cart"
+            />
+          </div>
+        </div>
+      ) : null}
     </article>
+  );
+}
+
+/**
+ * One of the two glyph buttons on the photograph.
+ *
+ * Fixed white-on-glass rather than theme tokens, for the reason the badge and the
+ * mission button give: it sits on a photograph, and a photograph does not lighten
+ * because the interface did.
+ *
+ * Revealed on hover with the three fallbacks this app uses everywhere — focus within
+ * the card, `focus-visible` on the button itself, and permanently visible where there
+ * is no hover to give. A control that only exists under a cursor does not exist on a
+ * phone, and cannot be reached by a keyboard.
+ */
+function QuickAction({
+  icon: Icon,
+  label,
+  title,
+}: {
+  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  /** The accessible name. Carries the product, since the button carries no text. */
+  label: string;
+  /** The hover tooltip. Short, because it repeats every card. */
+  title: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={title}
+      className={cn(
+        "pointer-events-auto grid size-7 place-items-center rounded-full border backdrop-blur-sm",
+        "border-white/40 bg-black/35 text-white",
+        "transition-[background-color,border-color,color,opacity,scale] duration-200",
+        "hover:scale-105 hover:bg-black/55",
+        "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 focus-visible:opacity-100",
+        "[@media(hover:none)]:opacity-100",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+      )}
+    >
+      <Icon className="size-3.5" aria-hidden={true} />
+    </button>
   );
 }

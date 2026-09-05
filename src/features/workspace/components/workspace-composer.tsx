@@ -74,8 +74,6 @@ const CATEGORIES = ["Clothing", "Shoes", "Bags", "Jewellery", "Watches"] as cons
  */
 const SPLIT_VIEW_PILLS = 3;
 
-const HEADING_ID = "workspace-composer-heading";
-
 export function WorkspaceComposer({
   navigateOnSubmit = false,
   focusToken = 0,
@@ -100,10 +98,19 @@ export function WorkspaceComposer({
 
   const { attachment, inputRef: fileRef, open, onChange, clear } = useAttachment();
 
-  // The decorative line shows only while the field is untouched — the hero's exact
-  // swap, which stops the demo text competing with real input. An attachment counts
-  // as touched, for the reason given on the docked composer.
-  const showDemo = !focused && value.length === 0 && !attachment;
+  /**
+   * The typewriter runs on the Concierge and nowhere else.
+   *
+   * `navigateOnSubmit` is true only there, where this composer *is* the page and the
+   * rotating prompt is doing a job: showing what you can ask of something you have not
+   * used yet. In the split view the question has already been asked — it is at the top
+   * of the thread, with an answer beside it — so a line typing itself in the field
+   * below is a second cursor moving while the reader is trying to read.
+   *
+   * With it off, the field falls back to its placeholder, which is what the rest of the
+   * app's inputs do.
+   */
+  const showDemo = navigateOnSubmit && !focused && value.length === 0 && !attachment;
 
   /**
    * A picture alone is a legitimate message — except on the one composer that
@@ -208,13 +215,6 @@ export function WorkspaceComposer({
 
       <div className={cn("relative flex w-full flex-col gap-7 rounded-[18.5px] p-4", PANEL)}>
         <div className="w-full">
-          <p
-            id={HEADING_ID}
-            className="mb-2.5 text-[11px] leading-4 text-content-muted dark:text-white/60"
-          >
-            Your personal shopper
-          </p>
-
           {/* Above the field, not beside it. A thumbnail in the row would shrink
               the measure of the very sentence it is a reference for. */}
           {attachment ? (
@@ -253,7 +253,6 @@ export function WorkspaceComposer({
               onBlur={() => setFocused(false)}
               placeholder={showDemo ? undefined : "Ask Snapi anything…"}
               aria-label="Ask Snapi anything"
-              aria-describedby={HEADING_ID}
               autoComplete="off"
               className={cn(
                 "w-full resize-none bg-transparent text-content dark:text-white/95",

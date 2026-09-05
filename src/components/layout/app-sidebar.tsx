@@ -7,6 +7,7 @@ import * as React from "react";
 
 import { AskSnapiButton } from "@/components/layout/ask-snapi-button";
 import { Logo } from "@/components/layout/logo";
+import { useNotifications } from "@/components/providers/notifications-provider";
 import { PlanBadge } from "@/components/layout/plan-badge";
 import { Avatar } from "@/components/ui/avatar";
 import { SidebarItem } from "@/components/layout/sidebar-item";
@@ -38,6 +39,7 @@ const RECENTS_LIMIT = 8;
 export function AppSidebar() {
   const pathname = usePathname();
   const { collapsed, toggleCollapsed, mobileOpen, setMobileOpen } = useSidebar();
+  const { unread: unreadNotifications } = useNotifications();
 
   // A route change must always dismiss the mobile drawer. Adjusting state during
   // render rather than in an effect resolves it in the same pass, so the drawer
@@ -202,7 +204,9 @@ export function AppSidebar() {
               label="Notifications"
               collapsed={railed}
               active={isActive(routes.notifications())}
-              count={mockCounts.notifications}
+              // From the provider, not the fixture: it goes down as things are read.
+              // A badge that cannot reach zero teaches people to stop reading it.
+              count={unreadNotifications}
               countLabel="unread"
               onNavigate={() => setMobileOpen(false)}
             />

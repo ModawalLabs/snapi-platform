@@ -20,8 +20,9 @@ const OPTIONS = [
  * "follow my OS" is a distinct choice from "always dark" — a binary toggle
  * silently discards it the first time the user touches the control.
  *
- * Until hydration completes nothing is marked active: the resolved theme is not
- * knowable on the server, and rendering a guess causes a hydration mismatch.
+ * Until hydration completes neither form commits to a theme: the stored one is not
+ * knowable on the server, and rendering a guess causes a hydration mismatch. Both
+ * branches fall back to System, which is what the server has no choice but to assume.
  */
 export function ThemeToggle({ collapsed = false }: { collapsed?: boolean }) {
   const { theme, setTheme } = useTheme();
@@ -30,7 +31,14 @@ export function ThemeToggle({ collapsed = false }: { collapsed?: boolean }) {
   // In the rail there is no room for three segments, so it becomes a single
   // button that advances through the options.
   if (collapsed) {
-    const currentIndex = OPTIONS.findIndex((option) => option.value === theme);
+    // `hydrated` gates this exactly as it gates the segmented control below, and for
+    // the same reason — it was missing here, which is a real bug rather than an
+    // oversight of style: this branch is the one the rail actually renders, so anyone
+    // with a theme other than System saw the server send Monitor / "Theme: System" and
+    // the client draw Moon / "Theme: Dark". React reported a hydration failure on every
+    // page in the shell. Before hydration the stored theme is not knowable, so the
+    // server's guess is the one both sides make, and the effect corrects it after.
+    const currentIndex = hydrated ? OPTIONS.findIndex((option) => option.value === theme) : -1;
     const current = OPTIONS[currentIndex === -1 ? 1 : currentIndex] ?? OPTIONS[1]!;
     const next = OPTIONS[(currentIndex === -1 ? 1 : currentIndex + 1) % OPTIONS.length]!;
 

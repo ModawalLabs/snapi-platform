@@ -1,9 +1,10 @@
 "use client";
 
-import { ArrowLeft, ArrowUpRight, Bookmark, Check, Plus, Share2, ShoppingBag } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Bookmark, Check, Plus, Share2 } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
+import { Cart } from "@/components/ui/icons";
 import { MediaFrame } from "@/components/ui/media-frame";
 import { fitForTile, imageRatio } from "@/lib/media";
 import type { MockProduct } from "@/lib/mock-data";
@@ -40,17 +41,27 @@ import type { ImageSource } from "@/types/media";
  * size, and a page with four equal calls to action has none. Reduced to icons on Buy's
  * own line, the hierarchy states itself: one thing to do, three things you may also do.
  *
- * The vendor URL was printed as text under the actions and has been removed: Buy names
- * the merchant and goes there, so the line restated a destination the button already
- * gave. `product.vendorUrl` is still what Buy points at — the address did not go away,
- * only the second copy of it.
+ * The vendor URL was printed as text under the actions and has been removed: the
+ * merchant is named under the price and Buy goes there, so the line restated a
+ * destination the page already gave. Buy itself no longer prints the merchant either —
+ * it is one word — but its accessible name still does. `product.vendorUrl` is what it
+ * points at; the address did not go away, only the second copy of it.
  */
+/**
+ * The width of Buy, and therefore of the mission control under it.
+ *
+ * A constant rather than the same utility typed twice, because "the same width as Buy"
+ * is a requirement of the layout and not a coincidence of two class lists. Written
+ * twice, the two drift the first time one of them is adjusted.
+ */
+const ACTION_WIDTH = "w-[13.5rem]";
+
 export function ProductDetail({
   product,
   backHref,
   related,
   relatedHref,
-  missionName,
+  inMissionWorkspace = false,
   inMission = false,
   onToggleMission,
 }: {
@@ -73,14 +84,15 @@ export function ProductDetail({
   /** Builds the `?p=` URL for a related product. */
   relatedHref: (slug: string) => string;
   /**
-   * The open mission's name, when this product was reached from one.
+   * Whether this product was reached from inside a mission, which is what renders the
+   * filing control.
    *
-   * Present only in a mission workspace, and its presence is what renders the filing
-   * control. The name is here because the button says it: "Add to A winter coat that
-   * isn't black" is a place you are putting something, where "Add to mission" is a
-   * form field.
+   * A boolean rather than the mission's name, which is what it used to be. The name was
+   * here because the button printed it, and the button no longer does — see the control
+   * itself. Keeping the name for a test that only asks "is there one" would be a prop
+   * that lies about what the component needs.
    */
-  missionName?: string;
+  inMissionWorkspace?: boolean;
   /** Whether this piece is already filed into that mission. */
   inMission?: boolean;
   onToggleMission?: () => void;
@@ -135,29 +147,67 @@ export function ProductDetail({
 
   return (
     <div className="pb-4">
-      <Link
-        href={backHref}
-        className={cn(
-          "inline-flex items-center gap-2 rounded-md text-[13px] font-medium text-content-muted",
-          "transition-colors duration-200 hover:text-content",
-          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-        )}
-      >
-        <ArrowLeft className="size-4" aria-hidden="true" />
-        Back to results
-      </Link>
-
       {/* ── The lot line ─────────────────────────────────────────────────────
-          Ruled top and bottom, with the lot number and the house at opposite ends —
-          the way an auction catalogue heads an entry. It is the single cheapest thing
-          that changes the register of the whole page: the same product under a lot
-          line reads as a piece with provenance rather than as a row in a database.
+          Ruled underneath only, the way an auction catalogue heads an entry. It is the
+          single cheapest thing that changes the register of the whole page: the same
+          product under a lot line reads as a piece with provenance rather than as a
+          row in a database.
 
-          The badge sits inside it, because "Archive" or "Verified" is exactly the sort
-          of note a catalogue carries beside a lot number rather than as a sticker on
-          the photograph. */}
-      <div className="mt-6 border-y border-border py-3">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+          The rule above it has gone. This row is the first thing in the pane, so that
+          hairline had nothing above it to divide — it drew a line across the top of the
+          scroll container and read as a border on the panel rather than as part of the
+          entry. One rule, underneath, is what actually does the work: it closes the
+          identifying strip and opens the lot.
+
+          Everything in it is set to the left, and "Back to results" has come down off
+          its own line to join it. That is worth two notes.
+
+          The first is that the lot number and the house used to sit at opposite ends,
+          which is the printed convention — but a catalogue page is a fixed measure and
+          this pane is not. At the widths this actually renders at, the two ends were
+          far enough apart to read as two unrelated captions rather than one line.
+          Grouped, they read as what they are: a single identifying strip taken in with
+          one movement of the eye. Grouped *left* they also start where everything below
+          them starts — the piece's name, the photograph, the specification table all
+          share that edge — so the entry has one margin instead of a header that hangs
+          off the opposite side from its own content.
+
+          The second is that the back link belongs in it, and that it leads. It is the
+          only control in the row — the other two are labels — and on a left-set row it
+          is the first thing read as well as the first thing reached for.
+
+          The badge stays beside the lot number, because "Archive" or "Verified" is
+          exactly the sort of note a catalogue carries there rather than as a sticker
+          on the photograph.
+
+          Hairlines between the three, not bullets: a bullet is punctuation inside a
+          sentence, and these are three separate statements that happen to share a
+          line. They are hidden below `sm`, where the row wraps and a rule ends up
+          orphaned at the start of a line. */}
+      <div className="border-b border-border py-3">
+        <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5">
+          {/* Set in the rail's own register rather than as body copy. It was 13px
+              medium, which next to two lines of tracked small caps read as a stray
+              sentence that had wandered in. The arrow keeps it unmistakably a way
+              back — the direction of travel is the one thing the type cannot say.
+
+              Not `cn`, deliberately, and this is worth knowing about: `text-eyebrow`
+              is a custom utility that sets a font *size*, so tailwind-merge reads it as
+              a `text-` class in the same group as `text-content-subtle` and drops the
+              earlier of the two. Through `cn` this link silently lost its small caps
+              and rendered as sentence case beside two lines that were not. A plain
+              string has no merge step to lose it to — which is also why the two
+              siblings below are written the same way. */}
+          <Link
+            href={backHref}
+            className="text-eyebrow inline-flex shrink-0 items-center gap-1.5 rounded-md text-content-subtle transition-colors duration-200 hover:text-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            <ArrowLeft className="size-3.5" aria-hidden="true" />
+            Back to results
+          </Link>
+
+          <span className="hidden h-3 w-px bg-border sm:block" aria-hidden="true" />
+
           <p className="text-eyebrow tabular flex items-center gap-2.5 text-content-subtle">
             Lot {lotNumber}
             {product.badge ? (
@@ -168,7 +218,9 @@ export function ProductDetail({
             ) : null}
           </p>
 
-          <p className="text-eyebrow truncate text-content-muted">{product.brand}</p>
+          <span className="hidden h-3 w-px bg-border sm:block" aria-hidden="true" />
+
+          <p className="text-eyebrow text-content-muted">{product.brand}</p>
         </div>
       </div>
 
@@ -179,22 +231,22 @@ export function ProductDetail({
         {product.name}
       </h2>
 
-      {/* Exactly 64px between the plate and the detail, and getting that meant
-          changing how the columns are sized rather than the gap alone.
+      {/* Two fifths photograph, three fifths words.
 
-          Fractional tracks with a capped image inside them cannot give a fixed gutter:
-          the track was 434px wide holding a 384px plate, so 50px of slack sat between
-          them and the *visible* gap was 98px however the gap property was set. An
-          `auto` track sizes to the plate itself, which puts the whole gutter in one
-          place where it can be set and measured.
+          `2fr_3fr` rather than `40%_60%`, and the difference is the gutter: two
+          percentage tracks plus a gap add up to more than the container and the row
+          overflows. Fractional tracks divide what is *left* after the gap, so the
+          split stays 40/60 of the usable measure at every width, which is what the
+          ratio was asked for.
 
-          The plate steps 288 → 384px at `xl`. A fixed 384 across all of `lg` would
-          leave the detail column at 171px on a 1024 laptop, where the chat panel has
-          already taken 340 of the width — a two-column layout that only works on a
-          large monitor is a one-column layout with a bug. */}
-      <div className="mt-7 grid gap-y-8 lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-x-16">
+          The plate used to be a fixed 288 → 384px in an `auto` track, sized to itself
+          so the gutter could be pinned at exactly 64px. It is proportional now, so it
+          grows with the pane instead of stranding a small square in a wide column —
+          and the gutter comes down to 48px, because a fixed gap that was set against a
+          384px plate reads as a canyon beside one half again as wide. */}
+      <div className="mt-7 grid gap-y-8 lg:grid-cols-[2fr_3fr] lg:gap-x-12">
         {/* ── Gallery ─────────────────────────────────────────────────────── */}
-        <div className="min-w-0 lg:w-72 xl:w-96">
+        <div className="min-w-0">
           <MediaFrame
             src={mainImage}
             alt=""
@@ -202,10 +254,10 @@ export function ProductDetail({
             fit={mainImage ? fitForTile(imageRatio(mainImage, product.ratio), 1) : "cover"}
             scrim={false}
             priority
-            // Declared at the widths it actually renders at, not at a share of the
-            // viewport. Over-declaring fetches a source larger than the box for no
-            // gain, which is the opposite of the point of shrinking it.
-            sizes="(min-width: 1280px) 384px, (min-width: 1024px) 288px, 92vw"
+            // A share of the viewport now that the plate is a share of the pane.
+            // The results column is roughly two thirds of the window at `lg` and up
+            // and the plate is two fifths of that, which lands near 26vw.
+            sizes="(min-width: 1024px) 26vw, 92vw"
             className="aspect-square w-full rounded-xl shadow-premium"
           />
 
@@ -276,15 +328,20 @@ export function ProductDetail({
           </p>
 
           {/* ── Actions ─────────────────────────────────────────────────────
-              One row: Buy takes the width it needs, the other three are icons at the
-              end of it. They were three labelled buttons stacked underneath, which
-              gave four full-width controls in a column — and four things the same size
-              have no primary. Reduced to glyphs they read as what they are: the
-              handful of things you can do *besides* buy it.
+              One row: Buy at a fixed width, the other three are icons at the end of
+              it. They were three labelled buttons stacked underneath, which gave four
+              full-width controls in a column — and four things the same size have no
+              primary. Reduced to glyphs they read as what they are: the handful of
+              things you can do *besides* buy it.
 
-              `flex-wrap` with a floor on Buy's width, so on a narrow pane the icons
-              drop to their own line rather than squeezing "Buy at Fashionphile" to two
-              characters. */}
+              Buy is one word now and no longer grows to fill the row. It read "Buy at
+              Fashionphile" across up to 450px, which made the loudest element on the
+              page also the widest — and the merchant is already named two lines above
+              under "Sold by". The link still says where it goes, in its accessible
+              name, so nothing was lost to anyone who cannot see that line.
+
+              `flex-wrap`, so on a narrow pane the icons drop to their own line rather
+              than compressing the button. */}
           <div className="mt-8 flex flex-wrap items-stretch gap-2.5">
             <a
               href={product.vendorUrl}
@@ -292,11 +349,12 @@ export function ProductDetail({
               // the referrer would tell them which search led here.
               target="_blank"
               rel="noopener noreferrer"
+              // Names the destination for anyone who cannot see "Sold by" above.
+              // The visible word is "Buy"; the link's purpose is the whole sentence.
+              aria-label={`Buy at ${product.merchant}`}
               className={cn(
-                // Grows to fill the row, but stops at 450px. Past that the label floats
-                // in the middle of a very wide slab with the icons stranded far to the
-                // right, and the pane is wider than that at `xl` and up.
-                "inline-flex max-w-[450px] min-w-[13rem] flex-1 items-center justify-center gap-2 rounded-lg bg-gold-solid px-5 py-3",
+                ACTION_WIDTH,
+                "inline-flex items-center justify-center gap-2 rounded-lg bg-gold-solid px-5 py-3",
                 "text-sm font-semibold text-gold-content",
                 "shadow-[var(--shadow-edge),var(--shadow-premium-sm)]",
                 "transition-[background-color,box-shadow,transform] duration-200",
@@ -304,16 +362,16 @@ export function ProductDetail({
                 "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
               )}
             >
-              Buy at {product.merchant}
+              Buy
               {/* Marks the exit. A primary button that silently leaves the site is the
                   one interaction people describe as "it closed my page". */}
               <ArrowUpRight className="size-4" aria-hidden="true" />
             </a>
 
-            {/* Cart and Save are toggles and say so by swapping to a tick and holding
-                a gold tint; Share is a one-shot action, so it takes no `active` and
-                gets no `aria-pressed` — a button that announces itself as pressed when
-                it does not stay pressed is a lie to a screen reader.
+            {/* Cart and Save are toggles and say so by filling in and holding a gold
+                tint; Share is a one-shot action, so it takes no `active` and gets no
+                `aria-pressed` — a button that announces itself as pressed when it does
+                not stay pressed is a lie to a screen reader.
 
                 The labels did not disappear, they moved: each is the button's
                 accessible name and its native tooltip, so the meaning is one hover or
@@ -321,11 +379,13 @@ export function ProductDetail({
 
                 Neither toggle swaps to a tick, which was the first attempt: two ticks
                 side by side are indistinguishable, and the one thing an icon-only
-                button cannot afford to lose is which thing it is. The bag stays a bag
-                and fills in. */}
+                button cannot afford to lose is which thing it is. Each glyph keeps its
+                own shape and fills. The cart is drawn rather than Lucide's, whose
+                wheels are solid where everything around them is outlined — see where it
+                is drawn. */}
             <div className="flex shrink-0 items-stretch gap-2.5">
               <SecondaryAction
-                icon={ShoppingBag}
+                icon={Cart}
                 label={inCart ? "In cart" : "Add to cart"}
                 active={inCart}
                 onClick={() => setInCart((current) => !current)}
@@ -342,24 +402,33 @@ export function ProductDetail({
           </div>
 
           {/* ── Filing into the mission ────────────────────────────────────────
-              Its own row under the buying controls, and rendered only when the reader
-              arrived from a mission. It is a *labelled* button rather than a fourth
-              icon: adding to a mission is the action this whole surface exists to
-              support when you are inside one, and a glyph among three others is not
-              where you put the thing the page is for.
+              Directly under Buy and exactly as wide, which is the point of
+              `ACTION_WIDTH` existing: these two are the column of decisions, and a
+              second button half a centimetre out of line with the first is the kind of
+              thing you cannot un-see once you have seen it.
+
+              Rendered only when the reader arrived from a mission. It is a *labelled*
+              button rather than a fourth icon: adding to a mission is the action this
+              whole surface exists to support when you are inside one, and a glyph
+              among three others is not where you put the thing the page is for.
 
               Outlined rather than filled, because Buy is the filled one. Two solid
               gold buttons stacked would be two primaries, which is none.
 
-              The label carries the mission's name, truncated — briefs run long, and a
-              button that wraps to three lines stops reading as a button. */}
-          {missionName ? (
+              The label does not name the mission. It carried it — "Add to A winter
+              coat that isn't black" — and a button whose label is a whole sentence
+              stops reading as a button; it also had to be truncated, so the long
+              briefs it was there to show were the ones it cut off. The mission is
+              named in the header of the workspace you are standing in, so the button
+              only has to say what it does. */}
+          {inMissionWorkspace ? (
             <button
               type="button"
               onClick={onToggleMission}
               aria-pressed={inMission}
               className={cn(
-                "mt-3 inline-flex w-full max-w-[450px] items-center justify-center gap-2 rounded-lg border px-4 py-2.5",
+                ACTION_WIDTH,
+                "mt-3 inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5",
                 "text-[13px] font-semibold",
                 "transition-[background-color,border-color,color] duration-200",
                 "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
@@ -373,16 +442,14 @@ export function ProductDetail({
               ) : (
                 <Plus className="size-4 shrink-0" aria-hidden="true" />
               )}
-              <span className="truncate">
-                {inMission ? "Added to" : "Add to"} {missionName}
-              </span>
+              {inMission ? "Added to mission" : "Add to mission"}
             </button>
           ) : null}
 
           {/* ── Description ───────────────────────────────────────────────────
-              Catalogue prose, then the facts. In that order because the prose is what
-              makes you want it and the list is what makes you sure — reversing them
-              opens the entry on a spec sheet.
+              Catalogue prose. The facts that used to follow it here are now the
+              specification table under both columns — same order, prose then facts,
+              just no longer crammed into the narrower half of the page.
 
               The rule and its spacing were on the vendor line that used to sit here.
               They belong to the *break* between buying and reading rather than to any
@@ -393,30 +460,61 @@ export function ProductDetail({
             <p className="mt-3 max-w-[62ch] text-sm leading-relaxed text-content-muted">
               {product.description}
             </p>
-
-            {/* A definition list, because that is what it is: labels bound to values.
-                `<dl>` announces the pairing, where a grid of `<p>`s announces eight
-                unrelated fragments.
-
-                No row gap and hairlines between, so the labels read as a continuous
-                column — the same discipline as the comparison table, and for the same
-                reason: a gap turns one rule into a row of dashes. */}
-            {product.details.length > 0 ? (
-              <dl className="mt-6">
-                {product.details.map((detail) => (
-                  <div
-                    key={detail.label}
-                    className="grid grid-cols-1 gap-x-6 border-t border-border py-3 sm:grid-cols-[8rem_1fr]"
-                  >
-                    <dt className="text-eyebrow pt-0.5 text-content-subtle">{detail.label}</dt>
-                    <dd className="text-[13px] leading-relaxed text-content">{detail.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            ) : null}
           </div>
         </div>
       </div>
+
+      {/* ── Specification ─────────────────────────────────────────────────────
+          Full width under both columns, where it used to be a single column of rows
+          stacked under the description.
+
+          Two reasons it moved. The list is now eight facts rather than four, and eight
+          rows in the narrower of two columns is a ladder that pushes the vendor rail a
+          screen further down. And it is *reference* rather than argument — the prose
+          above is what makes you want the piece, this is what you check before you buy
+          it — so it belongs where the entry stops being a pitch, across the whole
+          measure, like the specification block at the foot of a catalogue entry.
+
+          Four rows of two, filled across. The order is the fixture's and it is not
+          arbitrary: the four facts the entry has always carried take the top two rows,
+          the four added with this table take the bottom two. So the upper half is the
+          object — what it is made of, how big, what state, what comes with it — and the
+          lower half is its history: colour and origin, year and who stands behind it.
+          A reader who only wants to know whether it is real reads the last line.
+
+          Still a `<dl>` rather than a `<table>`. These are names bound to values, which
+          is what a definition list is for; a real table would announce four columns
+          because that is what the markup would contain, and a screen reader would read
+          the grid instead of the pairs. `<dl>` gives the pairing to the reader and the
+          two columns to the eye, which is the correct division of labour. */}
+      {product.details.length > 0 ? (
+        <section aria-label="Specification" className="mt-16">
+          <h3 className="text-eyebrow pb-4 text-content-subtle">Specification</h3>
+
+          {/* The rules make the table, so they have to be complete and they have to not
+              double up. Every cell draws its own bottom hairline; only the cells in the
+              left column draw the vertical one, and `odd` is what selects them because
+              a two-column row-major grid puts children 1, 3, 5, 7 on the left.
+
+              Below `sm` the grid is one column, so the vertical rule is dropped with
+              it — a divider down the side of a single stack is a border, not a table.
+              The padding goes with it for the same reason. */}
+          <dl className="grid grid-cols-1 border-t border-border sm:grid-cols-2">
+            {product.details.map((detail) => (
+              <div
+                key={detail.label}
+                className={cn(
+                  "grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-5 border-b border-border py-3.5",
+                  "sm:odd:border-r sm:odd:border-border sm:odd:pr-8 sm:even:pl-8",
+                )}
+              >
+                <dt className="text-eyebrow pt-0.5 text-content-subtle">{detail.label}</dt>
+                <dd className="text-[13px] leading-relaxed text-content">{detail.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ) : null}
 
       {/* ── More from this vendor ─────────────────────────────────────────────
           Full width, under both columns. The detail column runs out of content well

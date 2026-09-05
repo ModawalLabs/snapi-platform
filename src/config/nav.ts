@@ -1,4 +1,6 @@
-import { Bookmark, ConciergeBell, House, Radar, ShoppingBag, type LucideIcon } from "lucide-react";
+import { Bookmark, ConciergeBell, House, Radar, type LucideIcon } from "lucide-react";
+
+import { Cart } from "@/components/ui/icons";
 
 import { routes } from "@/config/routes";
 
@@ -73,7 +75,7 @@ export const sidebarNav: SidebarNavItem[] = [
     // The same glyph as "Add to cart" on a product page, which is the only place a
     // piece enters this page from. A different icon for the same idea reads as a
     // different feature.
-    icon: ShoppingBag,
+    icon: Cart,
     description: "Ready to check out",
   },
   {

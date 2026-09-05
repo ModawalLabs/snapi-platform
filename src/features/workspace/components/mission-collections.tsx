@@ -60,6 +60,8 @@ export function MissionCollections({
   onRemove,
   productHref,
   onFindMore,
+  openCategory,
+  onOpenCategory,
 }: {
   /** Everything added, in the order the results grid shows it. */
   products: MockProduct[];
@@ -68,9 +70,16 @@ export function MissionCollections({
   productHref: (slug: string) => string;
   /** Sends the reader back to the results — the only place things can be added. */
   onFindMore: () => void;
+  /**
+   * Which collection is open in full, or `null` for the overview.
+   *
+   * Controlled from the workspace rather than held here, and the reason is the dossier:
+   * its collection pills open a *named* collection from the other side of the split, so
+   * the value has to live somewhere both can reach. It was internal state until then.
+   */
+  openCategory: ProductCategory | null;
+  onOpenCategory: (category: ProductCategory | null) => void;
 }) {
-  const [openCategory, setOpenCategory] = React.useState<ProductCategory | null>(null);
-
   const groups = React.useMemo(() => {
     const byCategory = new Map<ProductCategory, MockProduct[]>();
     for (const product of products) {
@@ -139,7 +148,7 @@ export function MissionCollections({
       <div>
         <button
           type="button"
-          onClick={() => setOpenCategory(null)}
+          onClick={() => onOpenCategory(null)}
           className={cn(
             "inline-flex items-center gap-2 rounded-md text-[13px] font-medium text-content-muted",
             "transition-colors duration-200 hover:text-content",
@@ -218,7 +227,7 @@ export function MissionCollections({
                 {overflow > 0 ? (
                   <button
                     type="button"
-                    onClick={() => setOpenCategory(category)}
+                    onClick={() => onOpenCategory(category)}
                     className={cn(
                       "group/all inline-flex shrink-0 items-center gap-1.5 rounded-md text-[12px] font-semibold whitespace-nowrap text-gold",
                       "transition-colors duration-200 hover:text-gold-hover",

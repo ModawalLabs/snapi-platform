@@ -6,13 +6,15 @@ import * as React from "react";
 
 import { Logo } from "@/components/layout/logo";
 import { MissionCollections } from "@/features/workspace/components/mission-collections";
+import { MissionDossier } from "@/features/workspace/components/mission-dossier";
 import { ProductCard } from "@/features/workspace/components/product-card";
 import { ProductComparison } from "@/features/workspace/components/product-comparison";
 import { ProductDetail } from "@/features/workspace/components/product-detail";
 import { MAX_COMPARE } from "@/features/workspace/lib/compare";
 import { WorkspaceComposer } from "@/features/workspace/components/workspace-composer";
 import { WorkspaceThread } from "@/features/workspace/components/workspace-thread";
-import type { MockMessage, MockProduct } from "@/lib/mock-data";
+import type { MockMessage, MockProduct, ProductCategory } from "@/lib/mock-data";
+import type { ImageSource } from "@/types/media";
 import { cn } from "@/lib/utils";
 
 /**
@@ -55,7 +57,8 @@ export function Workspace({
   messages,
   products,
   resultsNote,
-  missionName,
+  filed,
+  mission,
 }: {
   eyebrow: string;
   title: string;
@@ -82,8 +85,14 @@ export function Workspace({
   products: MockProduct[];
   /** Optional one-liner above the grid on what these results are. */
   resultsNote?: string;
-  /** Set only when this workspace is a mission. See `WorkspaceSeed.missionName`. */
-  missionName?: string;
+  /** Ids already filed into the mission. See `WorkspaceSeed.filed`. */
+  filed?: string[];
+  /** Set only when this workspace is a mission. See `WorkspaceSeed.mission`. */
+  mission?: {
+    name: string;
+    image: ImageSource | null;
+    focus?: string;
+  };
 }) {
   const [sheetOpen, setSheetOpen] = React.useState(false);
 
@@ -107,19 +116,51 @@ export function Workspace({
    * adding is not a mode, it is a tap on a card that leaves you exactly where you were,
    * which is the difference between filing something and starting a task.
    *
+   * Seeded from `filed`, which a mission arrives with — see that prop. The initialiser
+   * runs once, so a later change to the seed does not reset what the reader has done.
+   *
    * Deliberately not lifted above the route. Nothing persists this yet, so a provider
    * would only widen where the illusion holds — reload and it is gone either way — and
    * the missions board's own `collections` count keeps its fixture value. That
    * disagreement is real and visible, and it goes away with the first backend.
    */
-  const [added, setAdded] = React.useState<string[]>([]);
+  const [added, setAdded] = React.useState<string[]>(filed ?? []);
   const [tab, setTab] = React.useState<"results" | "mission">("results");
 
-  const toggleAdded = React.useCallback((id: string) => {
-    setAdded((current) =>
-      current.includes(id) ? current.filter((addedId) => addedId !== id) : [...current, id],
-    );
+  /**
+   * Which collection the mission tab has open in full, if any.
+   *
+   * Held here rather than inside `MissionCollections` because the dossier — on the
+   * *other* side of the split — opens a named collection when one of its pills is
+   * pressed. Two components setting one view is a value that belongs to their parent.
+   */
+  const [openCollection, setOpenCollection] = React.useState<ProductCategory | null>(null);
+
+  /** A pill in the dossier: show the mission tab, on that collection. */
+  const openCollectionFromBrief = React.useCallback((category: ProductCategory) => {
+    setTab("mission");
+    setOpenCollection(category);
   }, []);
+
+  const toggleAdded = React.useCallback(
+    (id: string) => {
+      const next = added.includes(id) ? added.filter((addedId) => addedId !== id) : [...added, id];
+
+      setAdded(next);
+
+      // Removing the last piece of the collection being viewed leaves nowhere to be.
+      // `MissionCollections` renders the overview when it cannot find the category, so
+      // this is not about the current frame — it is about the *next* add of that
+      // category silently reopening a collection nobody asked for.
+      if (openCollection) {
+        const survives = products.some(
+          (product) => next.includes(product.id) && product.category === openCollection,
+        );
+        if (!survives) setOpenCollection(null);
+      }
+    },
+    [added, openCollection, products],
+  );
 
   /**
    * The filed pieces, resolved and ordered as the results grid shows them.
@@ -276,8 +317,22 @@ export function Workspace({
               No `z-index` on either side of it — an absolutely positioned child
               paints above its non-positioned siblings, so the content below is
               made `relative` instead, which puts it in the same painting group and
-              lets DOM order do the work. */}
-          <div className="ambient-wash pointer-events-none absolute inset-0" aria-hidden="true" />
+              lets DOM order do the work.
+
+              `opacity-80` holds it 20% below what the page headers carry, and the
+              *mechanism* is the point: the alternative is redefining `--glow-gold`,
+              `--glow-azure` and `--glow-gold-soft` on this element, which is six
+              values across two themes copied out of the palette and left to drift from
+              it. One number on the layer dims every light source in it, in both
+              themes, and cannot disagree with the tokens it is dimming.
+
+              Why quieter here at all: this column is a *reading* surface. The same wash
+              behind a page header sits under a headline and 40px of white space, where
+              here it sits behind twenty lines of 13px conversation. */}
+          <div
+            className="ambient-wash pointer-events-none absolute inset-0 opacity-80"
+            aria-hidden="true"
+          />
 
           {/* Sheet handle. `lg:hidden` — on desktop the panel is simply there, and
               a control to reveal what is already visible is noise. */}
@@ -306,6 +361,20 @@ export function Workspace({
               sheetOpen ? "" : "hidden",
             )}
           >
+            {/* The dossier is the first thing *in* the thread, not a header over
+                it: it scrolls away as the conversation grows, which is right for the
+                opening of a conversation rather than a frame around one. */}
+            {mission ? (
+              <MissionDossier
+                name={mission.name}
+                image={mission.image}
+                focus={mission.focus}
+                added={addedProducts}
+                productHref={productHref}
+                onOpenCollection={openCollectionFromBrief}
+              />
+            ) : null}
+
             <WorkspaceThread messages={messages} />
           </div>
 
@@ -340,7 +409,7 @@ export function Workspace({
                 // Filing works from the product page as well as the grid, and it is
                 // the same state either way: open a piece, add it, go back, and the
                 // tick is already on its card.
-                missionName={missionName}
+                inMissionWorkspace={Boolean(mission)}
                 inMission={added.includes(opened.id)}
                 onToggleMission={() => toggleAdded(opened.id)}
               />
@@ -385,7 +454,7 @@ export function Workspace({
 
                       Hidden while selecting. Compare takes over the grid, and a tab
                       that would abandon a half-made selection is a trapdoor. */}
-                  {missionName && !selecting ? (
+                  {mission && !selecting ? (
                     <div
                       role="tablist"
                       aria-label="Results or mission"
@@ -515,13 +584,15 @@ export function Workspace({
                   "pb-56 lg:pb-10",
                 )}
               >
-                {missionName && tab === "mission" ? (
+                {mission && tab === "mission" ? (
                   <MissionCollections
                     products={addedProducts}
-                    missionName={missionName}
+                    missionName={mission.name}
                     onRemove={toggleAdded}
                     productHref={productHref}
                     onFindMore={() => setTab("results")}
+                    openCategory={openCollection}
+                    onOpenCategory={setOpenCollection}
                   />
                 ) : products.length === 0 ? (
                   <p className="py-20 text-center text-sm text-content-muted">
@@ -544,7 +615,7 @@ export function Workspace({
                           // Filing into the mission: only ever on in a mission
                           // workspace, and the card itself suppresses it while
                           // Compare has the grid.
-                          addable={missionName !== undefined}
+                          addable={mission !== undefined}
                           inMission={added.includes(product.id)}
                           onToggleMission={() => toggleAdded(product.id)}
                         />

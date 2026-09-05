@@ -8,6 +8,7 @@ import {
   type MockProduct,
   type MockRecent,
 } from "@/lib/mock-data";
+import type { ImageSource } from "@/types/media";
 
 /**
  * Seeded workspace content, per entry point.
@@ -52,13 +53,36 @@ export interface WorkspaceSeed {
    * editorial story and a brand page are all searches with nothing to file into, so
    * they leave it undefined and none of that renders.
    *
-   * The name rather than the mission object, because the name is all any of it
-   * reads and nothing here has an endpoint to send an id to. The id joins it the day
-   * there is one. The view says the name out loud — "Added to A
-   * winter coat that isn't black" reads as a place, where "Added to this mission"
-   * reads as a system message.
+   * The name is what most of it reads — the view says it out loud, and "Added to A
+   * winter coat that isn't black" reads as a place where "Added to this mission" reads
+   * as a system message. The rest is the dossier at the head of the conversation: the
+   * photograph from the board and what the agent is doing. Not the brief — the
+   * thread's own first message is the brief, so the dossier would be quoting the line
+   * directly beneath it.
+   *
+   * Still no id. Nothing here has an endpoint to send one to; it joins the day there
+   * is one.
    */
-  missionName?: string;
+  /**
+   * Ids already filed into the mission, by category, before the reader touches
+   * anything.
+   *
+   * ⚠️ Demo seeding, and it is the one thing in this file that exists for the *screen*
+   * rather than for the product. A mission opened for the first time has nothing in it,
+   * so the collections and the picks would be absent — which is correct behaviour and
+   * shows none of the interface. Three collections of three is the smallest set that
+   * demonstrates the shape: more than one shelf, more than one piece on a shelf.
+   *
+   * A real backend replaces this with what the user has actually filed, and the day it
+   * does, this field is what it fills.
+   */
+  filed?: string[];
+  mission?: {
+    name: string;
+    image: ImageSource | null;
+    /** `object-position` for the 4:3 band. Belongs to the photograph, not the mission. */
+    focus?: string;
+  };
 }
 
 /**
@@ -81,7 +105,73 @@ function productsFor(key: string, count = 6): MockProduct[] {
   );
 }
 
+/**
+ * The products a mission surfaces, and which of them arrive already filed.
+ *
+ * Hand-picked rather than `productsFor`, and the reason is arithmetic: the deterministic
+ * window returns whatever twelve products sit at an offset, which for this fixture is
+ * six bags and one of everything else. Three collections of three cannot be cut from
+ * that, so the demo would show one deep shelf and four single pieces.
+ *
+ * The fourteen filed pieces span the six categories the mission is meant to show, and
+ * the counts are uneven on purpose. `Bags` holds six, which is the one that matters:
+ * the collections pane previews four per shelf and offers a screen of its own past that,
+ * so without a deep collection the "view all" path is unreachable code. The rest run one
+ * or two, because a mission holding exactly the same number of everything looks
+ * generated — and the strip is more legible when the numbers differ.
+ *
+ * Four pieces follow them in the results, unfiled: a coat, a shoe, a pendant and a
+ * scarf. That matters twice — the grid still has something to add, and the scarf's
+ * category is absent from the mission, so filing it demonstrably *creates* a seventh
+ * collection rather than growing one. A results tab where every card is already ticked
+ * demonstrates neither.
+ */
+function missionInventory(): { products: MockProduct[]; filed: string[] } {
+  const pick = (...slugs: string[]) =>
+    slugs.map((slug) => {
+      const product = mockProducts.find((item) => item.slug === slug);
+      // Throwing beats a silent `undefined` in a fixture: a renamed slug should fail
+      // the build, not empty a collection nobody notices is short.
+      if (!product) throw new Error(`missionInventory: no product for "${slug}"`);
+      return product;
+    });
+
+  const filed = pick(
+    // Outerwear · 2
+    "loro-piana-cashmere-storm-coat",
+    "the-row-camel-wool-coat",
+    // Tailoring · 2
+    "brunello-cucinelli-linen-suit",
+    "khaite-silk-slip-dress-navy",
+    // Bags · 6 — the deep one, and the only collection that overflows its preview
+    "hermes-kelly-28-retourne-gold",
+    "hermes-kelly-25-sellier-etoupe",
+    "hermes-birkin-30-togo",
+    "celine-16-medium-smooth-calf",
+    "loewe-puzzle-small-classic",
+    "the-row-margaux-15",
+    // Shoes · 2
+    "loro-piana-summer-walk-chocolate",
+    "bottega-veneta-intrecciato-loafer",
+    // Jewellery · 1
+    "cartier-love-bracelet-yellow-gold",
+    // Watches · 1
+    "cartier-tank-louis-1978",
+  );
+
+  const rest = pick(
+    "max-mara-teddy-camel-coat",
+    "church-s-shannon-derby",
+    "van-cleef-vintage-alhambra-pendant",
+    "loro-piana-baby-cashmere-scarf",
+  );
+
+  return { products: [...filed, ...rest], filed: filed.map((product) => product.id) };
+}
+
 export function missionSeed(mission: MockMission): WorkspaceSeed {
+  const { products, filed } = missionInventory();
+
   return {
     eyebrow: "Mission",
     title: mission.name,
@@ -89,7 +179,8 @@ export function missionSeed(mission: MockMission): WorkspaceSeed {
     closeLabel: "Close mission",
     selfHref: routes.mission(mission.id),
     resultsNote: "Ranked by how closely each answers the brief",
-    missionName: mission.name,
+    mission: { name: mission.name, image: mission.image, focus: mission.focus },
+    filed,
     messages: [
       { id: "m-1", role: "user", body: mission.brief },
       {
@@ -108,12 +199,10 @@ export function missionSeed(mission: MockMission): WorkspaceSeed {
         body: "Here's everything currently in play. I've put the closest match first and noted what each one gets right, including the two that miss on one point — you should see those rather than have me quietly drop them.",
       },
     ],
-    // Twelve rather than the default six. A mission is the one surface where the
-    // results are raw material rather than an answer — you file from them, and a
-    // collection built out of six candidates spread over five categories can never
-    // hold enough of anything to need a second screen. Twelve gives the deepest
-    // category six pieces, which is what makes the preview cap mean something.
-    products: productsFor(mission.id, 12),
+    // From `missionInventory`, not the deterministic window: a mission is the one
+    // surface where the results are raw material rather than an answer, and the shape
+    // of that material matters. See the note there.
+    products,
   };
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useComposerPrompt } from "@/components/layout/composer-provider";
 import { FilterToolbar } from "@/components/ui/filter-toolbar";
 import { PageHeader } from "@/components/ui/page-header";
 import { SavedItemCard } from "@/components/ui/saved-item-card";
@@ -53,6 +54,7 @@ export function CollectionPage({
   subject,
   dateLabel,
   emptyMessage,
+  emptyPrompt,
 }: {
   eyebrow: string;
   title: string;
@@ -64,6 +66,19 @@ export function CollectionPage({
   /** Prefixes each tile's date. "Saved", "Added". */
   dateLabel: string;
   emptyMessage: string;
+  /**
+   * What the composer should say while this collection is empty, if anything.
+   *
+   * Supplying it opts the page into summoning the dock — an empty collection has one
+   * useful action and no way to perform it on the page itself, so the thing that *can*
+   * perform it comes to the reader rather than waiting behind a button in the sidebar.
+   *
+   * Optional because it is not right for every collection that shares this component.
+   * The Cart passes none: an empty cart is not something you fill by describing a piece
+   * to an assistant, you fill it from a product page, and a composer sliding up to
+   * offer the wrong verb is worse than no composer at all.
+   */
+  emptyPrompt?: string;
 }) {
   // Soft removal lives in a shared hook — the Missions board runs the same Undo
   // window, and the timer semantics are subtle enough that two copies would drift.
@@ -74,6 +89,12 @@ export function CollectionPage({
   const { items, pendingId, visibleCount, requestRemove, undo } = usePendingRemoval<MockSavedItem>(
     () => [...seed].sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime()),
   );
+
+  // Only while there is genuinely nothing here. `items` still holds a piece that is
+  // mid-removal — the Undo overlay is drawn over it — so this cannot fire in the
+  // second between removing the last one and the timer committing it, which would pop
+  // the composer open underneath a control the reader may be about to press.
+  useComposerPrompt(items.length === 0 ? (emptyPrompt ?? null) : null);
 
   return (
     <>

@@ -30,7 +30,13 @@ export function SnapiList() {
       items={mockSavedItems}
       subject="list"
       dateLabel="Saved"
-      emptyMessage="Nothing saved yet. Snap or describe something and add it here."
+      // The two lines are deliberately not the same sentence. The page states what
+      // the list is *for* — which is the thing worth knowing while it is empty — and
+      // the composer, which is now on screen, carries the invitation to act. Written
+      // as one message repeated in both places, the reader would read it twice and
+      // learn it once.
+      emptyMessage="Nothing set aside yet — whatever you add stays in view, and Snapi keeps watch on what it costs."
+      emptyPrompt="Describe a piece to set aside and Snapi will watch its price."
     />
   );
 }

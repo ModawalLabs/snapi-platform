@@ -9,6 +9,7 @@ import {
   ComposerActions,
   useAttachment,
 } from "@/components/layout/composer-attachment";
+import { useComposer } from "@/components/layout/composer-provider";
 import { SendButton } from "@/components/layout/composer-send";
 import {
   autoGrow,
@@ -89,8 +90,6 @@ const PROMPTS = [
 
 const CATEGORIES = ["Clothing", "Shoes"] as const;
 
-const HEADING_ID = "app-composer-heading";
-
 export function Composer({
   active = true,
   onRequestOpen,
@@ -119,7 +118,29 @@ export function Composer({
   // hero's swap, which stops the demo text competing with real input. An attachment
   // counts as touched: a rotating demo prompt above a picked photograph reads as
   // the assistant describing that photograph, which it is not.
-  const showDemo = !focused && value.length === 0 && !attachment;
+  const { placeholder, prompted } = useComposer();
+
+  /**
+   * Nothing typed, nothing attached, cursor elsewhere.
+   *
+   * Split out from `showDemo` because the two are not the same question, and folding
+   * them together quietly cost the `/` chip: that hint is about the field being *idle*
+   * — it tells you how to get here — and it has nothing to do with whether a demo is
+   * running. Gating it on the demo made it vanish on any page that supplies its own
+   * placeholder, which was not a decision anyone took.
+   */
+  const idle = !focused && value.length === 0 && !attachment;
+
+  /**
+   * The rotating example prompts, and when they must give way.
+   *
+   * `!prompted` is the extra term. The demo types over the placeholder, so a page that
+   * has gone to the trouble of putting a specific sentence in the field would have it
+   * replaced, a third of a second later, by a generic one cycling through examples —
+   * the reader would see the answer to "what is this for" flicker past and vanish.
+   * When a page is talking, the demo stays quiet.
+   */
+  const showDemo = idle && !prompted;
 
   // A picture on its own is a legitimate message — "find me this" is the whole
   // premise of visual search — so the send button lights for one.
@@ -261,14 +282,13 @@ export function Composer({
           the card reads as hollow rather than as generous. */}
       <div className={cn("relative flex w-full flex-col gap-7 rounded-[18.5px] p-4", PANEL)}>
         <div className="w-full">
-          <div className="mb-2.5 flex items-center justify-between gap-2">
-            <p
-              id={HEADING_ID}
-              className="text-[11px] leading-4 text-content-muted dark:text-white/60"
-            >
-              Your personal shopper
-            </p>
-
+          {/* The label above the field is gone: "Your personal shopper" was a
+              standing description of the product sitting inside the control the reader
+              was about to type into, and the field's own placeholder already says what
+              to do with it. What stays on this row is the pair of controls — the
+              shortcut chip and the dismiss — so it is now a control strip rather than a
+              caption with buttons after it. */}
+          <div className="mb-2.5 flex items-center justify-end gap-2">
             {/* A visible keyboard affordance is what makes a field read as a
                 primary control rather than as ornament. `aria-hidden` because the
                 shortcut is a visual hint — the textarea already has its own
@@ -276,7 +296,7 @@ export function Composer({
                 Hidden once the field is in use: it has done its job by then, and
                 a hint sitting over live text is clutter. */}
             <span className="flex shrink-0 items-center gap-1.5">
-              {showDemo ? (
+              {idle ? (
                 <kbd
                   aria-hidden="true"
                   className={cn(
@@ -352,9 +372,12 @@ export function Composer({
               onKeyDown={handleKeyDown}
               onFocus={() => setFocused(true)}
               onBlur={() => setFocused(false)}
-              placeholder={showDemo ? undefined : "Ask Snapi anything…"}
-              aria-label="Ask Snapi anything"
-              aria-describedby={HEADING_ID}
+              placeholder={showDemo ? undefined : placeholder}
+              // Named by whatever it is currently asking for. When a page has supplied
+              // a line, that line is the most useful name this control can have — a
+              // screen reader announcing the standing "Ask Snapi anything" would be the
+              // one reader who never hears what the page came to say.
+              aria-label={placeholder}
               autoComplete="off"
               className={cn(
                 "w-full resize-none bg-transparent text-content dark:text-white/95",
